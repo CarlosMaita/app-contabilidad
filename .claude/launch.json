@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app-contabilidad",
+      "runtimeExecutable": "C:\\Users\\Maita\\AppData\\Local\\Microsoft\\WinGet\\Packages\\PHP.PHP.8.4_Microsoft.Winget.Source_8wekyb3d8bbwe\\php.exe",
+      "runtimeArgs": ["artisan", "serve", "--port=8017"],
+      "port": 8017
+    }
+  ]
+}
