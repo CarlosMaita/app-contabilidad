@@ -8,6 +8,7 @@ use App\Modules\Accounting\Livewire\ManualEntryForm;
 use App\Modules\Accounting\Livewire\MappingEditor;
 use App\Modules\Accounting\Livewire\Mappings;
 use App\Modules\Accounting\Livewire\Reports;
+use App\Modules\Accounting\Livewire\SubledgerBook;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function (): void {
@@ -17,6 +18,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/journal', JournalBook::class)->name('journal.index');
     Route::get('/journal/new', ManualEntryForm::class)->name('journal.create');
     Route::get('/ledger', GeneralLedger::class)->name('ledger.index');
+    Route::get('/subledgers', SubledgerBook::class)->name('subledgers.index');
     Route::get('/reports', Reports::class)->name('reports.index');
 
     Route::get('/exports/balance', [ExportController::class, 'balance'])->name('exports.balance');

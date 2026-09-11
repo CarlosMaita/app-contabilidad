@@ -25,6 +25,7 @@ class Account extends Model
         'pnl_section',
         'parent_id',
         'is_postable',
+        'is_auxiliary',
         'is_active',
     ];
 
@@ -34,8 +35,21 @@ class Account extends Model
             'type' => AccountType::class,
             'pnl_section' => PnlSection::class,
             'is_postable' => 'boolean',
+            'is_auxiliary' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function auxiliaries(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id')
+            ->where('is_auxiliary', true)
+            ->orderBy('code');
+    }
+
+    public function hasAuxiliaries(): bool
+    {
+        return $this->auxiliaries()->exists();
     }
 
     /**

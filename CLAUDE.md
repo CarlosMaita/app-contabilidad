@@ -29,6 +29,7 @@ $phpDir = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Win
 - Asientos contables inmutables: se corrigen con contra-asientos, nunca se editan ni borran.
 - Al registrarse un usuario se precarga un plan de cuentas base (listener de `Registered` → `DefaultChartOfAccounts`).
 - El P&L es multi-step (Bruta → EBITDA → EBIT → EBT → Neto con márgenes): cada cuenta de resultado lleva `pnl_section` (enum `PnlSection`, heredada del padre; las legadas sin sección caen en operativo). La cascada vive en `ReportService::CASCADE`.
+- Cuentas auxiliares (`is_auxiliary`, ej. "CxC de Luis" bajo "Clientes por cobrar"): reciben la imputación pero no aparecen en mayor ni estados — la principal consolida (mayor agregado en `LedgerService`). Su detalle se consulta en `/subledgers` (Libros auxiliares). Un auxiliar no puede tener sub-cuentas.
 - Ojo Blade: no usar bloques `@php ... @endphp` en vistas que también tienen `@php(...)` inline — el bloque queda sin compilar. Usar solo la forma inline o pasar datos desde el componente.
 
 ## Decisiones tomadas (de las "abiertas" del plan)

@@ -66,8 +66,16 @@ class LedgerService
      */
     private function linesQuery(Account $account, ?string $from = null, ?string $to = null, ?string $until = null): Builder
     {
+        // Una cuenta principal con auxiliares agrega los movimientos de todas.
+        $accountIds = Account::withoutGlobalScopes()
+            ->where('parent_id', $account->id)
+            ->where('is_auxiliary', true)
+            ->pluck('id')
+            ->prepend($account->id)
+            ->all();
+
         return JournalLine::query()
-            ->where('account_id', $account->id)
+            ->whereIn('account_id', $accountIds)
             ->whereHas('entry', function (Builder $q) use ($account, $from, $to, $until): void {
                 $q->withoutGlobalScopes()
                     ->where('user_id', $account->user_id)

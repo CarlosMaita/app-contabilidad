@@ -33,13 +33,20 @@
                         @php($account = $row['account'])
                         <tr class="row-hover {{ $account->is_active ? '' : 'opacity-50' }}">
                             <td class="td whitespace-nowrap font-mono" style="padding-left: {{ 16 + $row['depth'] * 18 }}px">{{ $account->code }}</td>
-                            <td class="td {{ $row['depth'] === 0 ? 'font-extrabold' : '' }}">{{ $account->name }}</td>
+                            <td class="td {{ $row['depth'] === 0 ? 'font-extrabold' : '' }}">
+                                {{ $account->name }}
+                                @if ($account->is_auxiliary)
+                                    <span class="badge ml-1 border-neutral-400 text-[9px] text-neutral-600">AUX</span>
+                                @endif
+                            </td>
                             <td class="td text-neutral-700">{{ $account->type->label() }}</td>
                             <td class="td text-xs text-neutral-700">{{ $account->effectivePnlSection()?->label() ?? '—' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_postable ? 'Sí' : 'No' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_active ? 'Sí' : 'No' }}</td>
                             <td class="td whitespace-nowrap text-right">
-                                <button type="button" class="btn-ghost text-xs" wire:click="create({{ $account->id }})">Sub-cuenta</button>
+                                @unless ($account->is_auxiliary)
+                                    <button type="button" class="btn-ghost text-xs" wire:click="create({{ $account->id }})">Sub-cuenta</button>
+                                @endunless
                                 <button type="button" class="btn-ghost text-xs" wire:click="edit({{ $account->id }})">Editar</button>
                                 <button type="button" class="btn-ghost text-xs" wire:click="delete({{ $account->id }})"
                                         wire:confirm="¿Eliminar la cuenta {{ $account->code }} {{ $account->name }}?">Eliminar</button>
@@ -124,12 +131,19 @@
                         <x-input-error :messages="$errors->get('parent_id')" class="mt-1" />
                     </div>
 
-                    <div class="flex items-center gap-6">
+                    <div class="flex flex-wrap items-center gap-6">
                         <label class="flex items-center gap-2 text-sm text-neutral-800">
                             <input type="checkbox" wire:model="is_postable" style="border-radius: 0;"
                                    class="border-neutral-400 text-accent focus:ring-accent">
                             Imputable (recibe apuntes)
                         </label>
+                        @if ($parent_id)
+                            <label class="flex items-center gap-2 text-sm text-neutral-800">
+                                <input type="checkbox" wire:model="is_auxiliary" style="border-radius: 0;"
+                                       class="border-neutral-400 text-accent focus:ring-accent">
+                                Cuenta auxiliar (detalle por tercero; no aparece en mayor ni estados)
+                            </label>
+                        @endif
                         <label class="flex items-center gap-2 text-sm text-neutral-800">
                             <input type="checkbox" wire:model="is_active" style="border-radius: 0;"
                                    class="border-neutral-400 text-accent focus:ring-accent">

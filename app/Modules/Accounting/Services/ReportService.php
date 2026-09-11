@@ -203,6 +203,14 @@ class ReportService
             foreach ($byParent->get($parentKey, collect()) as $account) {
                 $own = $this->signedBalance($account->type, $balances[$account->id] ?? null);
 
+                // Las auxiliares consolidan en su principal sin fila propia:
+                // su detalle vive en los Libros auxiliares.
+                if ($account->is_auxiliary) {
+                    $sum = Money::add($sum, $own);
+
+                    continue;
+                }
+
                 // Reservar la posición del padre antes de recorrer sus hijas.
                 $index = count($rows);
                 $rows[] = null;

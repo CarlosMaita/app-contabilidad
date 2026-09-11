@@ -23,6 +23,7 @@ class AccountFactory extends Factory
             'type' => fake()->randomElement(AccountType::cases()),
             'parent_id' => null,
             'is_postable' => true,
+            'is_auxiliary' => false,
             'is_active' => true,
         ];
     }

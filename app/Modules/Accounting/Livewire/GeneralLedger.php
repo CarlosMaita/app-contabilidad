@@ -37,7 +37,11 @@ class GeneralLedger extends Component
             : null;
 
         return view('accounting::livewire.general-ledger', [
-            'accounts' => Account::where('is_postable', true)->orderBy('code')->get(),
+            // Imputables no auxiliares + principales que consolidan auxiliares.
+            'accounts' => Account::where('is_auxiliary', false)
+                ->where(fn ($q) => $q->where('is_postable', true)->orWhereHas('auxiliaries'))
+                ->orderBy('code')
+                ->get(),
             'account' => $account,
             'result' => $result,
         ]);

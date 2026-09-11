@@ -33,6 +33,8 @@ class ChartOfAccounts extends Component
 
     public bool $is_postable = true;
 
+    public bool $is_auxiliary = false;
+
     public bool $is_active = true;
 
     public string $search = '';
@@ -43,6 +45,13 @@ class ChartOfAccounts extends Component
 
         if ($parentId !== null) {
             $parent = Account::findOrFail($parentId);
+
+            if ($parent->is_auxiliary) {
+                session()->flash('error', 'Una cuenta auxiliar no puede tener sub-cuentas.');
+
+                return;
+            }
+
             $this->parent_id = (string) $parent->id;
             $this->type = $parent->type->value;
             $this->pnl_section = $parent->effectivePnlSection()?->value ?? '';
@@ -69,6 +78,7 @@ class ChartOfAccounts extends Component
         $this->pnl_section = $account->effectivePnlSection()?->value ?? '';
         $this->parent_id = $account->parent_id !== null ? (string) $account->parent_id : null;
         $this->is_postable = $account->is_postable;
+        $this->is_auxiliary = $account->is_auxiliary;
         $this->is_active = $account->is_active;
         $this->showForm = true;
     }
@@ -93,6 +103,7 @@ class ChartOfAccounts extends Component
             ],
             'parent_id' => ['nullable', 'integer'],
             'is_postable' => ['boolean'],
+            'is_auxiliary' => ['boolean'],
             'is_active' => ['boolean'],
         ], [
             'pnl_section.in' => 'La sección del P&L no corresponde al tipo de cuenta.',
@@ -114,12 +125,23 @@ class ChartOfAccounts extends Component
                 return;
             }
 
+            if ($parent->is_auxiliary) {
+                $this->addError('parent_id', 'Una cuenta auxiliar no puede tener sub-cuentas.');
+
+                return;
+            }
+
             // Una sub-cuenta hereda el tipo y la sección del P&L de su padre.
             $validated['type'] = $parent->type->value;
             $validated['pnl_section'] = $parent->effectivePnlSection()?->value;
         }
 
         $validated['parent_id'] = $parent?->id;
+
+        // Un auxiliar solo existe bajo una cuenta principal.
+        if ($parent === null) {
+            $validated['is_auxiliary'] = false;
+        }
 
         $finalType = AccountType::from($validated['type']);
         if (! in_array($finalType, [AccountType::Income, AccountType::Expense], true)) {
@@ -237,6 +259,7 @@ class ChartOfAccounts extends Component
         $this->reset(['editingId', 'code', 'name', 'parent_id']);
         $this->type = AccountType::Asset->value;
         $this->pnl_section = '';
+        $this->is_auxiliary = false;
         $this->is_postable = true;
         $this->is_active = true;
         $this->resetErrorBag();

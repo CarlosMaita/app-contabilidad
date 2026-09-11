@@ -13,6 +13,7 @@ use App\Modules\Accounting\Livewire\ManualEntryForm;
 use App\Modules\Accounting\Livewire\MappingEditor;
 use App\Modules\Accounting\Livewire\Mappings;
 use App\Modules\Accounting\Livewire\Reports;
+use App\Modules\Accounting\Livewire\SubledgerBook;
 use App\Modules\Accounting\Services\EloquentChartOfAccountsProvider;
 use App\Modules\Accounting\Services\OperationVoider;
 use App\Modules\Operations\Events\OperationExecuted;
@@ -45,6 +46,7 @@ class AccountingServiceProvider extends ServiceProvider
         Livewire::component('accounting.mapping-editor', MappingEditor::class);
         Livewire::component('accounting.journal-book', JournalBook::class);
         Livewire::component('accounting.general-ledger', GeneralLedger::class);
+        Livewire::component('accounting.subledger-book', SubledgerBook::class);
         Livewire::component('accounting.reports', Reports::class);
         Livewire::component('accounting.manual-entry-form', ManualEntryForm::class);
         Livewire::component('accounting.dashboard', Dashboard::class);
