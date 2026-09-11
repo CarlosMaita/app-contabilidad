@@ -80,7 +80,7 @@ new #[Layout('layouts.guest')] class extends Component
         <x-primary-button class="w-full">Crear cuenta</x-primary-button>
 
         <div class="text-xs text-neutral-700">
-            Se envía un correo de verificación; sin verificar no se puede operar.
+            Al crear la cuenta entrás directo, con un plan de cuentas base ya cargado.
         </div>
     </form>
 </div>

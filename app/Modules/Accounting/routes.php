@@ -10,7 +10,7 @@ use App\Modules\Accounting\Livewire\Mappings;
 use App\Modules\Accounting\Livewire\Reports;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth', 'verified'])->group(function (): void {
+Route::middleware('auth')->group(function (): void {
     Route::get('/accounts', ChartOfAccounts::class)->name('accounts.index');
     Route::get('/mappings', Mappings::class)->name('mappings.index');
     Route::get('/mappings/{operationType}', MappingEditor::class)->name('mappings.edit');

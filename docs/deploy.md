@@ -96,5 +96,5 @@ docker compose -f docker-compose.prod.yml ps                  # estado
 - Cookies `secure` (`SESSION_SECURE_COOKIE=true`) y proxies confiables
   configurados para que las URLs se generen con https.
 - OPcache con `validate_timestamps=0` (el código solo cambia con deploy).
-- Rate limiting de login/registro (Breeze) y verificación de email
-  obligatoria: configurar `MAIL_*` o nadie puede operar.
+- Rate limiting de login/registro (Breeze). El registro no exige verificar
+  el correo; configurar `MAIL_*` igual para que funcione el reset de contraseña.
