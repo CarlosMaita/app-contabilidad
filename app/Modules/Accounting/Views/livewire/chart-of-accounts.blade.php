@@ -22,6 +22,7 @@
                         <th class="th">Código</th>
                         <th class="th">Nombre</th>
                         <th class="th">Tipo</th>
+                        <th class="th">Sección P&L</th>
                         <th class="th">Imputable</th>
                         <th class="th">Activa</th>
                         <th class="th text-right">Acciones</th>
@@ -34,6 +35,7 @@
                             <td class="td whitespace-nowrap font-mono" style="padding-left: {{ 16 + $row['depth'] * 18 }}px">{{ $account->code }}</td>
                             <td class="td {{ $row['depth'] === 0 ? 'font-extrabold' : '' }}">{{ $account->name }}</td>
                             <td class="td text-neutral-700">{{ $account->type->label() }}</td>
+                            <td class="td text-xs text-neutral-700">{{ $account->effectivePnlSection()?->label() ?? '—' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_postable ? 'Sí' : 'No' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_active ? 'Sí' : 'No' }}</td>
                             <td class="td whitespace-nowrap text-right">
@@ -45,7 +47,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="td py-8 text-center text-neutral-700">
+                            <td colspan="7" class="td py-8 text-center text-neutral-700">
                                 No hay cuentas todavía. Creá la primera con «Nueva cuenta».
                             </td>
                         </tr>
@@ -76,7 +78,7 @@
                         </div>
                         <div>
                             <x-input-label for="type" value="Tipo" />
-                            <select id="type" wire:model="type" @disabled($parent_id) class="wf-input mt-1.5">
+                            <select id="type" wire:model.live="type" @disabled($parent_id) class="wf-input mt-1.5">
                                 @foreach ($types as $t)
                                     <option value="{{ $t->value }}">{{ $t->label() }}</option>
                                 @endforeach
@@ -87,6 +89,21 @@
                             <x-input-error :messages="$errors->get('type')" class="mt-1" />
                         </div>
                     </div>
+
+                    @if (count($pnlOptions) > 0)
+                        <div>
+                            <x-input-label for="pnl_section" value="Sección del estado de resultados" />
+                            <select id="pnl_section" wire:model="pnl_section" @disabled($parent_id) class="wf-input mt-1.5">
+                                @foreach ($pnlOptions as $option)
+                                    <option value="{{ $option->value }}">{{ $option->label() }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-neutral-600">
+                                {{ $parent_id ? 'Hereda la sección de la cuenta padre.' : 'Define en qué línea de la cascada del P&L suma esta cuenta.' }}
+                            </p>
+                            <x-input-error :messages="$errors->get('pnl_section')" class="mt-1" />
+                        </div>
+                    @endif
 
                     <div>
                         <x-input-label for="name" value="Nombre" />

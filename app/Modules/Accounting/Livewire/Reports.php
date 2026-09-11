@@ -25,6 +25,9 @@ class Reports extends Component
     #[Url]
     public string $to = '';
 
+    #[Url]
+    public bool $showZero = false;
+
     public string $closedUntil = '';
 
     public function mount(): void
@@ -59,10 +62,10 @@ class Reports extends Component
 
         return view('accounting::livewire.reports', [
             'balance' => $this->tab === 'balance'
-                ? $reports->balanceSheet($userId, $this->asOf)
+                ? $reports->balanceSheet($userId, $this->asOf, $this->showZero)
                 : null,
             'pnl' => $this->tab === 'pnl'
-                ? $reports->profitAndLoss($userId, $this->from !== '' ? $this->from : null, $this->to)
+                ? $reports->profitAndLoss($userId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
                 : null,
         ]);
     }

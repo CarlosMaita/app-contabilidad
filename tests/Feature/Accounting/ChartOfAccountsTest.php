@@ -60,14 +60,21 @@ test('al registrarse se precarga el plan de cuentas base', function () {
 
     $accounts = Account::withoutGlobalScopes()->where('user_id', $user->id)->get();
 
-    expect($accounts)->toHaveCount(21)
+    expect($accounts)->toHaveCount(41)
         ->and($accounts->firstWhere('code', '1.1.01')->name)->toBe('Caja')
         ->and($accounts->firstWhere('code', '1')->is_postable)->toBeFalse()
-        ->and($accounts->firstWhere('code', '4.1')->is_postable)->toBeTrue();
+        ->and($accounts->firstWhere('code', '4.1')->is_postable)->toBeFalse()
+        ->and($accounts->firstWhere('code', '4.1.01')->is_postable)->toBeTrue()
+        // Cada rama de resultado lleva su sección del P&L.
+        ->and($accounts->firstWhere('code', '5.1')->pnl_section->value)->toBe('cogs')
+        ->and($accounts->firstWhere('code', '6.2.01')->pnl_section->value)->toBe('depreciation')
+        ->and($accounts->firstWhere('code', '6.3.01')->pnl_section->value)->toBe('financial_expense')
+        ->and($accounts->firstWhere('code', '6.4.01')->pnl_section->value)->toBe('tax')
+        ->and($accounts->firstWhere('code', '1.1.01')->pnl_section)->toBeNull();
 
     // El evento es idempotente: no duplica el plan.
     event(new Registered($user));
-    expect(Account::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(21);
+    expect(Account::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(41);
 });
 
 test('se puede crear una cuenta desde el componente livewire', function () {

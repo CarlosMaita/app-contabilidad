@@ -100,15 +100,92 @@ test('el estado de resultados calcula ingresos, gastos y resultado neto por rang
     $user = User::factory()->create();
     setupReports($user);
 
+    // Cuentas sin sección asignada caen en operativo (fallback legado).
     $pnl = app(ReportService::class)->profitAndLoss($user->id, '2026-02-01', '2026-02-28');
 
-    expect($pnl['income']['total'])->toBe('500.00')
-        ->and($pnl['expense']['total'])->toBe('200.00')
-        ->and($pnl['result'])->toBe('300.00');
+    expect($pnl['sections']['operating_income']['total'])->toBe('500.00')
+        ->and($pnl['sections']['operating_expense']['total'])->toBe('200.00')
+        ->and($pnl['lines']['net'])->toBe('300.00')
+        ->and($pnl['margins']['net'])->toBe('60.0');
 
     $anual = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31');
-    expect($anual['income']['total'])->toBe('1499.00')
-        ->and($anual['result'])->toBe('1299.00');
+    expect($anual['total_income'])->toBe('1499.00')
+        ->and($anual['lines']['net'])->toBe('1299.00');
+});
+
+test('la cascada del P&L discrimina bruta, EBITDA, EBIT, financiero, impuestos y neto', function () {
+    $user = User::factory()->create();
+
+    $mk = fn (string $code, string $name, string $type, string $section): Account => Account::factory()->for($user)->create([
+        'code' => $code, 'name' => $name, 'type' => $type, 'pnl_section' => $section,
+    ]);
+
+    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $ventas = $mk('4.1', 'Ventas', 'income', 'operating_income');
+    $intGanados = $mk('4.2', 'Intereses ganados', 'income', 'financial_income');
+    $otrosIng = $mk('4.3', 'Otros ingresos', 'income', 'other_income');
+    $costo = $mk('5.1', 'Costo de ingresos', 'expense', 'cogs');
+    $gastos = $mk('6.1', 'Gastos operativos', 'expense', 'operating_expense');
+    $depre = $mk('6.2', 'Depreciación', 'expense', 'depreciation');
+    $intPagados = $mk('6.3', 'Intereses pagados', 'expense', 'financial_expense');
+    $impuesto = $mk('6.4', 'Impuesto a las ganancias', 'expense', 'tax');
+
+    $post = fn (Account $debit, Account $credit, string $amount) => app(JournalEntryBuilder::class)->post(
+        userId: $user->id, date: '2026-03-10', description: 'mov',
+        lines: [
+            ['side' => EntrySide::Debit, 'account_id' => $debit->id, 'amount' => $amount, 'memo' => null],
+            ['side' => EntrySide::Credit, 'account_id' => $credit->id, 'amount' => $amount, 'memo' => null],
+        ],
+    );
+
+    $post($caja, $ventas, '1000.00');      // ingresos operativos
+    $post($costo, $caja, '400.00');        // COGS
+    $post($gastos, $caja, '150.00');       // opex
+    $post($depre, $caja, '50.00');         // D&A
+    $post($caja, $intGanados, '20.00');    // ingreso financiero
+    $post($intPagados, $caja, '70.00');    // gasto financiero
+    $post($caja, $otrosIng, '30.00');      // otros ingresos
+    $post($impuesto, $caja, '90.00');      // impuesto
+
+    $pnl = app(ReportService::class)->profitAndLoss($user->id, '2026-03-01', '2026-03-31');
+
+    expect($pnl['lines']['gross'])->toBe('600.00')       // 1000 − 400
+        ->and($pnl['lines']['ebitda'])->toBe('450.00')   // − 150
+        ->and($pnl['lines']['ebit'])->toBe('400.00')     // − 50
+        ->and($pnl['lines']['financial'])->toBe('-50.00') // 20 − 70
+        ->and($pnl['lines']['other'])->toBe('30.00')
+        ->and($pnl['lines']['ebt'])->toBe('380.00')      // 400 − 50 + 30
+        ->and($pnl['lines']['net'])->toBe('290.00')      // − 90
+        ->and($pnl['margins']['gross'])->toBe('60.0')
+        ->and($pnl['margins']['ebitda'])->toBe('45.0')
+        ->and($pnl['margins']['ebit'])->toBe('40.0')
+        ->and($pnl['margins']['net'])->toBe('29.0');
+
+    // El neto de la cascada coincide con ingresos − gastos totales.
+    expect(bcsub($pnl['total_income'], $pnl['total_expense'], 2))->toBe($pnl['lines']['net']);
+});
+
+test('el P&L oculta cuentas en cero salvo que se pidan explícitamente', function () {
+    $user = User::factory()->create();
+
+    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income', 'pnl_section' => 'operating_income']);
+    Account::factory()->for($user)->create(['code' => '6.2', 'name' => 'Depreciación sin uso', 'type' => 'expense', 'pnl_section' => 'depreciation']);
+    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+
+    app(JournalEntryBuilder::class)->post(
+        userId: $user->id, date: '2026-03-10', description: 'venta',
+        lines: [
+            ['side' => EntrySide::Debit, 'account_id' => $caja->id, 'amount' => '100.00', 'memo' => null],
+            ['side' => EntrySide::Credit, 'account_id' => $ventas->id, 'amount' => '100.00', 'memo' => null],
+        ],
+    );
+
+    $oculto = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31');
+    expect($oculto['sections']['depreciation']['rows'])->toBeEmpty();
+
+    $visible = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31', includeZero: true);
+    expect($visible['sections']['depreciation']['rows'])->toHaveCount(1)
+        ->and($visible['sections']['depreciation']['rows'][0]['amount'])->toBe('0.00');
 });
 
 test('los reportes no incluyen datos de otros usuarios', function () {
@@ -135,7 +212,8 @@ test('la página de reportes muestra el balance y el P&L', function () {
         ->call('setTab', 'pnl')
         ->set('from', '2026-02-01')
         ->set('to', '2026-02-28')
-        ->assertSee('Resultado neto del período')
+        ->assertSee('Resultado Neto del período')
+        ->assertSee('EBITDA')
         ->assertSee('300,00');
 });
 

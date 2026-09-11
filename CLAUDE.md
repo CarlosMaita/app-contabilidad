@@ -28,6 +28,8 @@ $phpDir = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\PHP.PHP.8.4_Microsoft.Win
 - Todo modelo de negocio usa el trait `App\Modules\Shared\Traits\BelongsToUser` (global scope por `user_id` + autocompletado al crear). En tests, usar `withoutGlobalScopes()` para ver datos de otros usuarios.
 - Asientos contables inmutables: se corrigen con contra-asientos, nunca se editan ni borran.
 - Al registrarse un usuario se precarga un plan de cuentas base (listener de `Registered` → `DefaultChartOfAccounts`).
+- El P&L es multi-step (Bruta → EBITDA → EBIT → EBT → Neto con márgenes): cada cuenta de resultado lleva `pnl_section` (enum `PnlSection`, heredada del padre; las legadas sin sección caen en operativo). La cascada vive en `ReportService::CASCADE`.
+- Ojo Blade: no usar bloques `@php ... @endphp` en vistas que también tienen `@php(...)` inline — el bloque queda sin compilar. Usar solo la forma inline o pasar datos desde el componente.
 
 ## Decisiones tomadas (de las "abiertas" del plan)
 

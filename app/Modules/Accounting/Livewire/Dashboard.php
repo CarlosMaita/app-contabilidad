@@ -33,9 +33,9 @@ class Dashboard extends Component
             'balanced' => $balance['check']['balanced'],
             'liabilitiesEquity' => $balance['check']['liabilities_equity'],
             'difference' => bcsub($balance['check']['assets'], $balance['check']['liabilities_equity'], 2),
-            'monthIncome' => $month['income']['total'],
-            'monthExpense' => $month['expense']['total'],
-            'monthResult' => $month['result'],
+            'monthIncome' => $month['total_income'],
+            'monthExpense' => $month['total_expense'],
+            'monthResult' => $month['lines']['net'],
             'attention' => $attention,
             'lastEntries' => JournalEntry::with('execution.operationType')
                 ->orderByDesc('date')

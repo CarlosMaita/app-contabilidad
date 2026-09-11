@@ -22,9 +22,10 @@ class ExportController extends Controller
         $validated = $request->validate([
             'format' => ['required', 'in:pdf,xlsx'],
             'as_of' => ['required', 'date'],
+            'show_zero' => ['nullable', 'boolean'],
         ]);
 
-        $report = $reports->balanceSheet($request->user()->id, $validated['as_of']);
+        $report = $reports->balanceSheet($request->user()->id, $validated['as_of'], (bool) ($validated['show_zero'] ?? false));
         $filename = "balance-general-{$validated['as_of']}";
 
         if ($validated['format'] === 'xlsx') {
@@ -41,9 +42,10 @@ class ExportController extends Controller
             'format' => ['required', 'in:pdf,xlsx'],
             'from' => ['nullable', 'date'],
             'to' => ['required', 'date'],
+            'show_zero' => ['nullable', 'boolean'],
         ]);
 
-        $report = $reports->profitAndLoss($request->user()->id, $validated['from'] ?? null, $validated['to']);
+        $report = $reports->profitAndLoss($request->user()->id, $validated['from'] ?? null, $validated['to'], (bool) ($validated['show_zero'] ?? false));
         $filename = "estado-de-resultados-{$validated['to']}";
 
         if ($validated['format'] === 'xlsx') {

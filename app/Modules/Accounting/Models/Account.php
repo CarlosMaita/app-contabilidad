@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Models;
 
 use App\Modules\Accounting\Enums\AccountType;
+use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Shared\Traits\BelongsToUser;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -21,6 +22,7 @@ class Account extends Model
         'code',
         'name',
         'type',
+        'pnl_section',
         'parent_id',
         'is_postable',
         'is_active',
@@ -30,9 +32,23 @@ class Account extends Model
     {
         return [
             'type' => AccountType::class,
+            'pnl_section' => PnlSection::class,
             'is_postable' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Sección del P&L efectiva: la guardada si es válida para el tipo,
+     * o la sección por defecto (cuentas legadas sin clasificar).
+     */
+    public function effectivePnlSection(): ?PnlSection
+    {
+        if ($this->pnl_section !== null && in_array($this->pnl_section, PnlSection::forType($this->type), true)) {
+            return $this->pnl_section;
+        }
+
+        return PnlSection::defaultFor($this->type);
     }
 
     protected static function newFactory()

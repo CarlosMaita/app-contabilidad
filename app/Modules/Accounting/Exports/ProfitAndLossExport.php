@@ -8,7 +8,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 class ProfitAndLossExport implements FromArray, WithHeadings
 {
     /**
-     * @param  array{from: ?string, to: string, income: array{rows: array, total: string}, expense: array{rows: array, total: string}, result: string}  $report
+     * @param  array{sections: array<string, array{label: string, rows: array, total: string}>, lines: array<string, string>, margins: array<string, ?string>}  $report
      */
     public function __construct(
         private readonly array $report,
@@ -16,21 +16,57 @@ class ProfitAndLossExport implements FromArray, WithHeadings
 
     public function headings(): array
     {
-        return ['Sección', 'Código', 'Cuenta', 'Monto'];
+        return ['Código', 'Cuenta / Línea', 'Importe', 'Margen %'];
     }
 
     public function array(): array
     {
         $rows = [];
 
-        foreach (['income' => 'Ingresos', 'expense' => 'Gastos'] as $key => $label) {
-            foreach ($this->report[$key]['rows'] as $row) {
-                $rows[] = [$label, $row['account']->code, $row['account']->name, $row['amount']];
-            }
-            $rows[] = [$label, '', 'TOTAL '.mb_strtoupper($label), $this->report[$key]['total']];
-        }
+        $section = function (string $key, string $sign) use (&$rows): void {
+            $s = $this->report['sections'][$key];
 
-        $rows[] = ['', '', 'RESULTADO NETO', $this->report['result']];
+            if ($s['rows'] === [] && (float) $s['total'] == 0.0) {
+                return;
+            }
+
+            $rows[] = ['', ($sign === '−' ? '(−) ' : '').mb_strtoupper($s['label']), $s['total'], ''];
+
+            foreach ($s['rows'] as $row) {
+                $rows[] = [
+                    $row['account']->code,
+                    str_repeat('    ', $row['level'] + 1).$row['account']->name,
+                    $row['amount'],
+                    '',
+                ];
+            }
+        };
+
+        $line = function (string $key, string $label, ?string $marginKey = null) use (&$rows): void {
+            $rows[] = [
+                '',
+                $label,
+                $this->report['lines'][$key],
+                $marginKey !== null ? ($this->report['margins'][$marginKey] ?? '') : '',
+            ];
+        };
+
+        $section('operating_income', '+');
+        $section('cogs', '−');
+        $line('gross', 'UTILIDAD BRUTA', 'gross');
+        $section('operating_expense', '−');
+        $line('ebitda', 'EBITDA', 'ebitda');
+        $section('depreciation', '−');
+        $line('ebit', 'EBIT · UTILIDAD OPERATIVA', 'ebit');
+        $section('financial_income', '+');
+        $section('financial_expense', '−');
+        $line('financial', 'Resultado financiero');
+        $section('other_income', '+');
+        $section('other_expense', '−');
+        $line('other', 'Resultado no operativo');
+        $line('ebt', 'RESULTADO ANTES DE IMPUESTOS');
+        $section('tax', '−');
+        $line('net', 'RESULTADO NETO', 'net');
 
         return $rows;
     }
