@@ -31,6 +31,8 @@ class Dashboard extends Component
         return view('accounting::livewire.dashboard', [
             'assets' => $balance['sections']['asset']['total'],
             'balanced' => $balance['check']['balanced'],
+            'liabilitiesEquity' => $balance['check']['liabilities_equity'],
+            'difference' => bcsub($balance['check']['assets'], $balance['check']['liabilities_equity'], 2),
             'monthIncome' => $month['income']['total'],
             'monthExpense' => $month['expense']['total'],
             'monthResult' => $month['result'],

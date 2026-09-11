@@ -225,7 +225,7 @@ test('el dashboard muestra KPIs, últimos asientos y eventos por atender', funct
 
     Livewire::test(Dashboard::class)
         ->assertSee('Activo total')
-        ->assertSee('300.00')
+        ->assertSee('300,00')
         ->assertSee('Venta del mes')
         ->assertSee('1 evento(s) sin contabilizar');
 });

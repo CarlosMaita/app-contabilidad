@@ -1,3 +1,96 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Sistema "Modernist": Archivo, tinta #201e1d sobre #f3f2f2, acento #ec3013,
+   radios en 0 y bordes de 2px. Nada flota, nada se decora. */
+
+@layer base {
+    body {
+        @apply bg-ground text-ink antialiased;
+    }
+
+    ::selection {
+        background: rgba(236, 48, 19, 0.3);
+    }
+
+    :focus {
+        outline: none;
+    }
+
+    :focus-visible {
+        outline: 2px solid #ec3013;
+        outline-offset: 2px;
+    }
+}
+
+@layer components {
+    /* Panel: la superficie base del sistema. */
+    .panel {
+        @apply border-2 border-ink bg-white;
+    }
+
+    .panel-head {
+        @apply flex flex-wrap items-center gap-3 border-b-2 border-ink px-4 py-3;
+    }
+
+    .panel-title {
+        @apply text-sm font-extrabold;
+    }
+
+    /* Kicker: etiqueta 10px uppercase con tracking ancho. */
+    .kicker {
+        @apply text-[10px] font-normal uppercase tracking-[0.12em] text-neutral-600;
+    }
+
+    /* Botones: Archivo 800, radio 0, texto SIEMPRE a la izquierda. */
+    .btn {
+        @apply inline-flex cursor-pointer items-center justify-start gap-2 border border-transparent px-3.5 py-2 text-left text-[13px] font-extrabold leading-tight disabled:cursor-not-allowed disabled:opacity-45;
+    }
+
+    .btn-primary {
+        @apply btn bg-accent text-white hover:bg-accent-600 active:bg-accent-700;
+    }
+
+    .btn-secondary {
+        @apply btn border-ink bg-transparent text-ink hover:bg-ink/5 active:bg-ink/10;
+    }
+
+    .btn-ghost {
+        @apply btn px-1 text-accent hover:bg-accent/10 active:bg-accent/20;
+    }
+
+    /* Inputs y selects del wireframe. */
+    .wf-input {
+        @apply block w-full border border-neutral-400 bg-white px-2.5 py-[7px] text-[13px] text-ink placeholder:text-neutral-500 focus:border-ink focus:ring-0;
+        border-radius: 0;
+        caret-color: #ec3013;
+    }
+
+    .form-label {
+        @apply block text-xs font-normal uppercase tracking-[0.06em] text-neutral-700;
+    }
+
+    /* Tablas: encabezado 10px uppercase, filas con reglas finas. */
+    .th {
+        @apply px-4 py-2 text-left text-[10px] font-normal uppercase tracking-[0.1em] text-neutral-600;
+    }
+
+    .td {
+        @apply border-b border-neutral-200 px-4 py-2;
+    }
+
+    .row-hover:hover {
+        @apply bg-neutral-100;
+    }
+
+    /* Badge de estado: borde 1px + texto 800, sin píldoras. */
+    .badge {
+        @apply inline-block border px-[7px] py-[2px] text-[11px] font-extrabold;
+    }
+
+    /* Nota de implementación / avisos con barra roja. */
+    .note-accent {
+        @apply border-l-[3px] border-accent bg-white px-4 py-3;
+    }
+}

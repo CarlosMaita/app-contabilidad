@@ -1,131 +1,115 @@
 <div>
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro diario</h2>
-                <div class="flex items-center gap-3 text-sm">
-                    <a href="{{ route('exports.journal', ['format' => 'pdf', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
-                       class="text-indigo-600 hover:underline">PDF</a>
-                    <a href="{{ route('exports.journal', ['format' => 'xlsx', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
-                       class="text-indigo-600 hover:underline">XLSX</a>
-                    <a href="{{ route('journal.create') }}" wire:navigate>
-                        <x-primary-button type="button">Nuevo asiento</x-primary-button>
-                    </a>
-                </div>
+    <x-page-header title="Libro diario" route="/journal · JournalBook" />
+
+    <div class="flex flex-col gap-4 p-6">
+        @if (session('status'))
+            <div class="note-accent text-sm">{{ session('status') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="note-accent text-sm font-extrabold text-accent-600">{{ session('error') }}</div>
+        @endif
+
+        <div class="flex flex-wrap items-end gap-3">
+            <div>
+                <x-input-label value="Desde" class="text-[10px]" />
+                <x-text-input type="date" class="mt-1 w-[140px]" wire:model.live="from" />
             </div>
+            <div>
+                <x-input-label value="Hasta" class="text-[10px]" />
+                <x-text-input type="date" class="mt-1 w-[140px]" wire:model.live="to" />
+            </div>
+            <div class="min-w-[240px] grow sm:max-w-[340px]">
+                <x-input-label value="Buscar" class="text-[10px]" />
+                <x-text-input type="search" class="mt-1" placeholder="Número, descripción, cuenta u operación"
+                              wire:model.live.debounce.300ms="search" />
+            </div>
+            <a href="{{ route('exports.journal', ['format' => 'pdf', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
+               class="btn-secondary ml-auto">PDF</a>
+            <a href="{{ route('exports.journal', ['format' => 'xlsx', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
+               class="btn-secondary">XLSX</a>
+            <a href="{{ route('journal.create') }}" wire:navigate class="btn-primary">Nuevo asiento</a>
+        </div>
 
-            @if (session('status'))
-                <div class="rounded-md bg-green-50 p-3 text-sm text-green-700">{{ session('status') }}</div>
-            @endif
-            @if (session('error'))
-                <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
-            @endif
-
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 space-y-4">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div class="col-span-2">
-                        <x-input-label value="Buscar" class="text-xs" />
-                        <x-text-input type="search" class="mt-1 block w-full text-sm"
-                                      placeholder="N°, descripción, cuenta u operación…"
-                                      wire:model.live.debounce.300ms="search" />
-                    </div>
-                    <div>
-                        <x-input-label value="Desde" class="text-xs" />
-                        <x-text-input type="date" class="mt-1 block w-full text-sm" wire:model.live="from" />
-                    </div>
-                    <div>
-                        <x-input-label value="Hasta" class="text-xs" />
-                        <x-text-input type="date" class="mt-1 block w-full text-sm" wire:model.live="to" />
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead>
-                            <tr class="text-left text-xs uppercase text-gray-500">
-                                <th class="px-3 py-2">N°</th>
-                                <th class="px-3 py-2">Fecha</th>
-                                <th class="px-3 py-2">Descripción</th>
-                                <th class="px-3 py-2">Origen</th>
-                                <th class="px-3 py-2">Estado</th>
-                                <th class="px-3 py-2 text-right">Detalle</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            @forelse ($entries as $entry)
-                                <tr wire:key="entry-{{ $entry->id }}" class="{{ $entry->status->value === 'reversed' ? 'opacity-60' : '' }}">
-                                    <td class="px-3 py-2 font-mono">{{ $entry->number }}</td>
-                                    <td class="px-3 py-2 whitespace-nowrap">{{ $entry->date->format('d/m/Y') }}</td>
-                                    <td class="px-3 py-2">
-                                        {{ $entry->description }}
-                                        @if ($entry->reverses_entry_id)
-                                            <span class="text-xs text-gray-500">(revierte #{{ $entry->reverses?->number }})</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-3 py-2 text-gray-600">
-                                        {{ $entry->execution?->operationType?->name ?? 'Manual' }}
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium {{ $entry->status->value === 'posted' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600' }}">
-                                            {{ $entry->status->label() }}
-                                        </span>
-                                    </td>
-                                    <td class="px-3 py-2 text-right whitespace-nowrap space-x-2">
-                                        <button type="button" class="text-indigo-600 hover:underline"
-                                                wire:click="toggleExpand({{ $entry->id }})">
-                                            {{ $expandedId === $entry->id ? 'Ocultar' : 'Ver' }}
-                                        </button>
-                                        @if ($entry->status->value === 'posted')
-                                            <button type="button" class="text-red-600 hover:underline"
-                                                    wire:click="reverse({{ $entry->id }})"
-                                                    wire:confirm="¿Revertir el asiento #{{ $entry->number }}? Se genera un contra-asiento{{ $entry->operation_execution_id ? ' y se anula la operación de origen' : '' }}.">
-                                                Revertir
-                                            </button>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @if ($expandedId === $entry->id)
-                                    <tr class="bg-gray-50">
-                                        <td colspan="6" class="px-3 py-3">
-                                            <table class="min-w-full text-xs">
-                                                <thead>
-                                                    <tr class="text-left uppercase text-gray-500">
-                                                        <th class="px-2 py-1">Cuenta</th>
-                                                        <th class="px-2 py-1">Memo</th>
-                                                        <th class="px-2 py-1 text-right">Debe</th>
-                                                        <th class="px-2 py-1 text-right">Haber</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="divide-y divide-gray-200">
-                                                    @foreach ($entry->lines as $line)
-                                                        <tr>
-                                                            <td class="px-2 py-1">
-                                                                <span class="font-mono">{{ $line->account->code }}</span>
-                                                                {{ $line->account->name }}
-                                                            </td>
-                                                            <td class="px-2 py-1 text-gray-500">{{ $line->memo ?? '—' }}</td>
-                                                            <td class="px-2 py-1 text-right font-mono">{{ $line->debit != 0 ? number_format((float) $line->debit, 2) : '' }}</td>
-                                                            <td class="px-2 py-1 text-right font-mono">{{ $line->credit != 0 ? number_format((float) $line->credit, 2) : '' }}</td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>
+        <div class="panel overflow-x-auto">
+            <table class="w-full border-collapse text-[13px]">
+                <thead>
+                    <tr class="border-b-2 border-ink">
+                        <th class="th">N.º</th>
+                        <th class="th">Fecha</th>
+                        <th class="th">Descripción</th>
+                        <th class="th">Origen</th>
+                        <th class="th">Estado</th>
+                        <th class="th text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($entries as $entry)
+                        <tr class="row-hover {{ $entry->status->value === 'reversed' ? 'opacity-60' : '' }}" wire:key="entry-{{ $entry->id }}">
+                            <td class="td font-mono font-extrabold">{{ $entry->number }}</td>
+                            <td class="td whitespace-nowrap font-mono">{{ $entry->date->format('d/m/Y') }}</td>
+                            <td class="td">
+                                {{ $entry->description }}
+                                @if ($entry->reverses_entry_id)
+                                    <span class="text-xs text-neutral-600">(revierte #{{ $entry->reverses?->number }})</span>
                                 @endif
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="px-3 py-8 text-center text-gray-500">
-                                        No hay asientos con estos filtros.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                            </td>
+                            <td class="td text-xs text-neutral-700">{{ $entry->execution?->operationType?->name ?? 'Manual' }}</td>
+                            <td class="td">
+                                <span class="badge {{ $entry->status->value === 'posted' ? 'border-ink text-ink' : 'border-neutral-400 text-neutral-600' }}">
+                                    {{ $entry->status->label() }}
+                                </span>
+                            </td>
+                            <td class="td whitespace-nowrap text-right">
+                                <button type="button" class="btn-ghost text-xs" wire:click="toggleExpand({{ $entry->id }})">
+                                    {{ $expandedId === $entry->id ? 'Ocultar' : 'Ver' }}
+                                </button>
+                                @if ($entry->status->value === 'posted')
+                                    <button type="button" class="btn-ghost text-xs" wire:click="reverse({{ $entry->id }})"
+                                            wire:confirm="¿Revertir el asiento #{{ $entry->number }}? Se genera un contra-asiento{{ $entry->operation_execution_id ? ' y se anula la operación de origen' : '' }}.">
+                                        Revertir
+                                    </button>
+                                @endif
+                            </td>
+                        </tr>
+                        @if ($expandedId === $entry->id)
+                            <tr class="bg-neutral-100">
+                                <td colspan="6" class="border-b border-neutral-300 px-4 py-3">
+                                    <table class="w-full text-xs">
+                                        <thead>
+                                            <tr>
+                                                <th class="px-2 py-1 text-left text-[10px] font-normal uppercase tracking-[0.1em] text-neutral-600">Cuenta</th>
+                                                <th class="px-2 py-1 text-left text-[10px] font-normal uppercase tracking-[0.1em] text-neutral-600">Memo</th>
+                                                <th class="px-2 py-1 text-right text-[10px] font-normal uppercase tracking-[0.1em] text-neutral-600">Debe</th>
+                                                <th class="px-2 py-1 text-right text-[10px] font-normal uppercase tracking-[0.1em] text-neutral-600">Haber</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($entry->lines as $line)
+                                                <tr class="border-t border-neutral-200">
+                                                    <td class="px-2 py-1.5"><span class="font-mono">{{ $line->account->code }}</span> {{ $line->account->name }}</td>
+                                                    <td class="px-2 py-1.5 text-neutral-600">{{ $line->memo ?? '—' }}</td>
+                                                    <td class="px-2 py-1.5 text-right font-mono">{{ $line->debit != 0 ? number_format((float) $line->debit, 2, ',', '.') : '' }}</td>
+                                                    <td class="px-2 py-1.5 text-right font-mono">{{ $line->credit != 0 ? number_format((float) $line->credit, 2, ',', '.') : '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </td>
+                            </tr>
+                        @endif
+                    @empty
+                        <tr>
+                            <td colspan="6" class="td py-8 text-center text-neutral-700">No hay asientos con estos filtros.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
 
-                {{ $entries->links() }}
-            </div>
+        {{ $entries->links() }}
+
+        <div class="text-xs text-neutral-700">
+            Asiento inmutable: se corrige con reversión. Numeración correlativa por usuario.
         </div>
     </div>
 </div>

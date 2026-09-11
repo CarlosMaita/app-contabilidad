@@ -21,15 +21,15 @@ enum ExecutionStatus: string
         };
     }
 
-    /** Clases Tailwind para el badge de estado. */
+    /** Clases Tailwind para el badge de estado (borde 1px, sin píldoras). */
     public function badgeClasses(): string
     {
         return match ($this) {
-            self::Pending => 'bg-yellow-100 text-yellow-800',
-            self::Posted => 'bg-green-100 text-green-800',
-            self::Failed => 'bg-red-100 text-red-800',
-            self::Unmapped => 'bg-gray-100 text-gray-700',
-            self::Voided => 'bg-gray-200 text-gray-500 line-through',
+            self::Pending => 'border-neutral-400 text-neutral-700',
+            self::Posted => 'border-ink text-ink',
+            self::Failed => 'border-accent text-accent-600',
+            self::Unmapped => 'border-neutral-400 text-neutral-700',
+            self::Voided => 'border-neutral-400 text-neutral-500 line-through',
         };
     }
 }

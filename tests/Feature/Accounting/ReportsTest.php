@@ -130,13 +130,13 @@ test('la página de reportes muestra el balance y el P&L', function () {
     Livewire::test(Reports::class)
         ->set('asOf', '2026-02-28')
         ->assertSee('Balance general')
-        ->assertSee('1,300.00')
+        ->assertSee('1.300,00')
         ->assertSee('Resultado del período')
         ->call('setTab', 'pnl')
         ->set('from', '2026-02-01')
         ->set('to', '2026-02-28')
         ->assertSee('Resultado neto del período')
-        ->assertSee('300.00');
+        ->assertSee('300,00');
 });
 
 test('las exportaciones descargan XLSX y PDF con el formato correcto', function () {

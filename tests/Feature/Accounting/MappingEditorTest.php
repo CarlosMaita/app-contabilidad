@@ -40,7 +40,8 @@ test('la página del editor de mapeo se renderiza', function () {
     $this->actingAs($user)
         ->get("/mappings/{$s['type']->id}")
         ->assertOk()
-        ->assertSee('Mapeo contable: Pago');
+        ->assertSee('Editor de mapeo')
+        ->assertSee('Pago');
 });
 
 test('guardar un mapeo crea la versión 1 activa con sus líneas', function () {

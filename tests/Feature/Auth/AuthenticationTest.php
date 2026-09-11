@@ -50,9 +50,11 @@ test('navigation menu can be rendered', function () {
 
     $response = $this->get('/dashboard');
 
+    // La navegación es el sidebar del layout, no un componente Livewire.
     $response
         ->assertOk()
-        ->assertSeeVolt('layout.navigation');
+        ->assertSee('Plan de cuentas')
+        ->assertSee('Libro diario');
 });
 
 test('users can logout', function () {
@@ -60,13 +62,7 @@ test('users can logout', function () {
 
     $this->actingAs($user);
 
-    $component = Volt::test('layout.navigation');
-
-    $component->call('logout');
-
-    $component
-        ->assertHasNoErrors()
-        ->assertRedirect('/');
+    $this->post('/logout')->assertRedirect('/');
 
     $this->assertGuest();
 });

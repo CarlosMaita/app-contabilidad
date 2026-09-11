@@ -5,25 +5,37 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+        <title>{{ config('app.name', 'Contabilidad') }}</title>
 
         <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/" wire:navigate>
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
+    <body class="font-sans">
+        <div class="grid min-h-screen md:grid-cols-2">
+            <div class="hidden flex-col gap-6 border-r-2 border-ink p-12 md:flex">
+                <div class="text-[13px] font-extrabold uppercase tracking-[0.12em]">Contabilidad por eventos</div>
+                <div class="max-w-[9em] text-[38px] font-extrabold leading-[1.08] tracking-tight">
+                    Operaciones que se convierten en asientos.
+                </div>
+                <div class="max-w-[34em] text-sm text-neutral-800">
+                    Definí tus operaciones, ejecutalas con un formulario y el mapeo contable
+                    genera los asientos de doble partida. Diario, mayor, balance y P&amp;L al instante.
+                </div>
+                <div class="mt-auto grid gap-2 font-mono text-xs text-neutral-700">
+                    <div>doble partida · asientos inmutables</div>
+                    <div>verificación: Activo = Pasivo + Patrimonio</div>
+                </div>
             </div>
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
+            <div class="flex items-center p-6 sm:p-12">
+                <div class="w-full max-w-[380px]">
+                    {{ $slot }}
+                </div>
             </div>
         </div>
     </body>
