@@ -1,0 +1,10 @@
+# TLS automático con Let's Encrypt.
+# APP_DOMAIN y ACME_EMAIL vienen del .env (docker compose los inyecta).
+{
+    email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+    reverse_proxy web:80
+    encode gzip
+}

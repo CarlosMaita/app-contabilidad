@@ -1,0 +1,25 @@
+# Servicios de apoyo para desarrollo (la app corre con `php artisan serve`).
+# Útil para desarrollar contra PostgreSQL y Redis como en producción:
+#   docker compose up -d
+#   y en .env: DB_CONNECTION=pgsql, DB_HOST=127.0.0.1, REDIS_HOST=127.0.0.1
+name: app-contabilidad-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: contabilidad
+      POSTGRES_USER: contabilidad
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  dev_db_data:

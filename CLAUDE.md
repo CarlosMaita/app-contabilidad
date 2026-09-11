@@ -5,8 +5,9 @@ Aplicación de contabilidad basada en eventos: el módulo **Operations** ejecuta
 ## Stack
 
 - Laravel 12, PHP 8.4, Livewire 3 (Breeze stack Livewire/Volt), Tailwind, Alpine.
-- Tests con Pest (`php artisan test`). Lint con Pint (`./vendor/bin/pint`).
-- Dev local: SQLite (`database/database.sqlite`). Producción prevista: PostgreSQL + Redis (docker, Fase 6).
+- Tests con Pest (`php artisan test`). Lint con Pint (`./vendor/bin/pint`). Ojo: no correr tests con la config cacheada (`php artisan optimize:clear` antes si se cacheó).
+- Dev local: SQLite (`database/database.sqlite`) y cola `sync`. Producción: PostgreSQL 16 + Redis en Docker — ver `docs/deploy.md` (Dockerfile multi-stage en `docker/`, `docker-compose.prod.yml`, deploy con `scripts/deploy.sh`, backups con `scripts/backup.sh`).
+- Si se agregan vistas Blade o clases Tailwind en enums dentro de `app/Modules`, ya están cubiertas por `tailwind.config.js` (content incluye `app/Modules/**`); no usar clases dinámicas concatenadas.
 
 ## Entorno local (Windows)
 
