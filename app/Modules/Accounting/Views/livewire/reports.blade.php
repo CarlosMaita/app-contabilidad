@@ -1,6 +1,10 @@
 <div>
     <div class="py-12">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-4">
+            @if (session('status'))
+                <div class="rounded-md bg-green-50 p-3 text-sm text-green-700">{{ session('status') }}</div>
+            @endif
+
             <div class="flex items-center justify-between">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Estados financieros</h2>
                 <div class="flex rounded-md shadow-sm">
@@ -151,6 +155,22 @@
                     </div>
                 </div>
             @endif
+
+            <div class="bg-white shadow-sm sm:rounded-lg p-6 space-y-3">
+                <h3 class="font-semibold text-gray-800">Cierre de período</h3>
+                <p class="text-sm text-gray-500">
+                    Con el período cerrado no se puede registrar, generar ni revertir ningún asiento con fecha
+                    igual o anterior al día indicado. Dejalo vacío para no bloquear fechas.
+                </p>
+                <form wire:submit="saveClosedUntil" class="flex items-end gap-3">
+                    <div>
+                        <x-input-label value="Cerrado hasta (inclusive)" class="text-xs" />
+                        <x-text-input type="date" class="mt-1 block text-sm" wire:model="closedUntil" />
+                        <x-input-error :messages="$errors->get('closedUntil')" class="mt-1" />
+                    </div>
+                    <x-primary-button type="submit">Guardar</x-primary-button>
+                </form>
+            </div>
         </div>
     </div>
 </div>

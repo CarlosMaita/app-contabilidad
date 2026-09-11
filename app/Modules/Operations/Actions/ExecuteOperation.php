@@ -32,10 +32,21 @@ class ExecuteOperation
         string $executedAt,
         ?string $description = null,
     ): OperationExecution {
+        $closedUntil = auth()->user()?->accounting_closed_until;
+
         $validated = Validator::make(
             ['executed_at' => $executedAt, ...$payload],
-            ['executed_at' => ['required', 'date'], ...$this->payloadRules($type)],
-            [],
+            [
+                'executed_at' => [
+                    'required',
+                    'date',
+                    ...($closedUntil !== null ? ['after:'.$closedUntil->toDateString()] : []),
+                ],
+                ...$this->payloadRules($type),
+            ],
+            [
+                'executed_at.after' => 'El período contable está cerrado hasta el '.$closedUntil?->format('d/m/Y').'.',
+            ],
             $this->attributeNames($type),
         )->validate();
 

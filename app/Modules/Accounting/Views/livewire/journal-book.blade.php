@@ -3,13 +3,23 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
             <div class="flex items-center justify-between">
                 <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro diario</h2>
-                <div class="flex gap-2 text-sm">
+                <div class="flex items-center gap-3 text-sm">
                     <a href="{{ route('exports.journal', ['format' => 'pdf', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
                        class="text-indigo-600 hover:underline">PDF</a>
                     <a href="{{ route('exports.journal', ['format' => 'xlsx', 'search' => $search, 'from' => $from, 'to' => $to]) }}"
                        class="text-indigo-600 hover:underline">XLSX</a>
+                    <a href="{{ route('journal.create') }}" wire:navigate>
+                        <x-primary-button type="button">Nuevo asiento</x-primary-button>
+                    </a>
                 </div>
             </div>
+
+            @if (session('status'))
+                <div class="rounded-md bg-green-50 p-3 text-sm text-green-700">{{ session('status') }}</div>
+            @endif
+            @if (session('error'))
+                <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">{{ session('error') }}</div>
+            @endif
 
             <div class="bg-white shadow-sm sm:rounded-lg p-4 space-y-4">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -60,11 +70,18 @@
                                             {{ $entry->status->label() }}
                                         </span>
                                     </td>
-                                    <td class="px-3 py-2 text-right">
+                                    <td class="px-3 py-2 text-right whitespace-nowrap space-x-2">
                                         <button type="button" class="text-indigo-600 hover:underline"
                                                 wire:click="toggleExpand({{ $entry->id }})">
                                             {{ $expandedId === $entry->id ? 'Ocultar' : 'Ver' }}
                                         </button>
+                                        @if ($entry->status->value === 'posted')
+                                            <button type="button" class="text-red-600 hover:underline"
+                                                    wire:click="reverse({{ $entry->id }})"
+                                                    wire:confirm="¿Revertir el asiento #{{ $entry->number }}? Se genera un contra-asiento{{ $entry->operation_execution_id ? ' y se anula la operación de origen' : '' }}.">
+                                                Revertir
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                                 @if ($expandedId === $entry->id)

@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Services\ReportService;
+use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -24,11 +25,27 @@ class Reports extends Component
     #[Url]
     public string $to = '';
 
+    public string $closedUntil = '';
+
     public function mount(): void
     {
         $this->asOf = $this->asOf !== '' ? $this->asOf : now()->toDateString();
         $this->from = $this->from !== '' ? $this->from : now()->startOfYear()->toDateString();
         $this->to = $this->to !== '' ? $this->to : now()->toDateString();
+        $this->closedUntil = auth()->user()->accounting_closed_until?->toDateString() ?? '';
+    }
+
+    public function saveClosedUntil(): void
+    {
+        $this->validate(['closedUntil' => ['nullable', 'date']]);
+
+        auth()->user()->update([
+            'accounting_closed_until' => $this->closedUntil !== '' ? $this->closedUntil : null,
+        ]);
+
+        session()->flash('status', $this->closedUntil !== ''
+            ? 'Período cerrado hasta el '.Carbon::parse($this->closedUntil)->format('d/m/Y').'.'
+            : 'Período reabierto: no hay fechas bloqueadas.');
     }
 
     public function setTab(string $tab): void

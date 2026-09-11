@@ -4,6 +4,7 @@ use App\Modules\Accounting\Http\ExportController;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
 use App\Modules\Accounting\Livewire\GeneralLedger;
 use App\Modules\Accounting\Livewire\JournalBook;
+use App\Modules\Accounting\Livewire\ManualEntryForm;
 use App\Modules\Accounting\Livewire\MappingEditor;
 use App\Modules\Accounting\Livewire\Mappings;
 use App\Modules\Accounting\Livewire\Reports;
@@ -14,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
     Route::get('/mappings', Mappings::class)->name('mappings.index');
     Route::get('/mappings/{operationType}', MappingEditor::class)->name('mappings.edit');
     Route::get('/journal', JournalBook::class)->name('journal.index');
+    Route::get('/journal/new', ManualEntryForm::class)->name('journal.create');
     Route::get('/ledger', GeneralLedger::class)->name('ledger.index');
     Route::get('/reports', Reports::class)->name('reports.index');
 

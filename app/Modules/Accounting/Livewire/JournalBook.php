@@ -3,11 +3,14 @@
 namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Models\JournalEntry;
+use App\Modules\Accounting\Services\ReverseJournalEntry;
+use App\Modules\Shared\Contracts\VoidsOperationExecutions;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use RuntimeException;
 
 #[Layout('layouts.app')]
 #[Title('Libro diario')]
@@ -36,6 +39,24 @@ class JournalBook extends Component
     public function toggleExpand(int $id): void
     {
         $this->expandedId = $this->expandedId === $id ? null : $id;
+    }
+
+    public function reverse(int $entryId): void
+    {
+        $entry = JournalEntry::findOrFail($entryId);
+
+        try {
+            if ($entry->operation_execution_id !== null) {
+                // Mantiene consistente el log de eventos: anula la ejecución.
+                app(VoidsOperationExecutions::class)->voidExecution($entry->operation_execution_id);
+                session()->flash('status', 'Operación anulada con contra-asiento.');
+            } else {
+                $reversal = app(ReverseJournalEntry::class)->reverse($entry);
+                session()->flash('status', "Contra-asiento #{$reversal->number} registrado.");
+            }
+        } catch (RuntimeException $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function render()

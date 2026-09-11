@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Services;
 
 use App\Modules\Accounting\Events\JournalEntryPosted;
+use App\Modules\Accounting\Exceptions\ClosedPeriodException;
 use App\Modules\Accounting\Exceptions\MappingResolutionException;
 use App\Modules\Accounting\Exceptions\UnbalancedEntryException;
 use App\Modules\Accounting\Models\AccountingMapping;
@@ -70,7 +71,7 @@ class PostExecutionToJournal
             $execution->update(['status' => ExecutionStatus::Posted, 'error_message' => null]);
 
             JournalEntryPosted::dispatch($entry);
-        } catch (MappingResolutionException|UnbalancedEntryException $e) {
+        } catch (MappingResolutionException|UnbalancedEntryException|ClosedPeriodException $e) {
             $execution->update([
                 'status' => ExecutionStatus::Failed,
                 'error_message' => $e->getMessage(),

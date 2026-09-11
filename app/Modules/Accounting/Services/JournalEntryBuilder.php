@@ -2,14 +2,17 @@
 
 namespace App\Modules\Accounting\Services;
 
+use App\Models\User;
 use App\Modules\Accounting\Enums\EntrySide;
 use App\Modules\Accounting\Enums\JournalEntryStatus;
+use App\Modules\Accounting\Exceptions\ClosedPeriodException;
 use App\Modules\Accounting\Exceptions\MappingResolutionException;
 use App\Modules\Accounting\Exceptions\UnbalancedEntryException;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Shared\Money\Money;
 use DateTimeInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class JournalEntryBuilder
@@ -33,6 +36,7 @@ class JournalEntryBuilder
             throw new UnbalancedEntryException('El asiento no tiene líneas (todas evaluaron a 0).');
         }
 
+        $this->assertPeriodIsOpen($userId, $date);
         $this->assertAccountsArePostable($userId, array_column($lines, 'account_id'));
 
         [$totalDebit, $totalCredit] = $this->totals($lines);
@@ -77,6 +81,26 @@ class JournalEntryBuilder
 
             return $entry;
         });
+    }
+
+    /**
+     * Cierre de período: nada se registra con fecha dentro del período cerrado.
+     */
+    private function assertPeriodIsOpen(int $userId, DateTimeInterface|string $date): void
+    {
+        $closedUntil = User::query()->whereKey($userId)->value('accounting_closed_until');
+
+        if ($closedUntil === null) {
+            return;
+        }
+
+        $closedUntil = Carbon::parse($closedUntil);
+
+        if (Carbon::parse($date)->lte($closedUntil)) {
+            throw new ClosedPeriodException(
+                'El período contable está cerrado hasta el '.$closedUntil->format('d/m/Y').'. Usá una fecha posterior o reabrí el período en Reportes.',
+            );
+        }
     }
 
     /**
