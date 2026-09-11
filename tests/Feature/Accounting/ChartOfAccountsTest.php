@@ -2,9 +2,13 @@
 
 use App\Models\User;
 use App\Modules\Accounting\Enums\AccountType;
+use App\Modules\Accounting\Enums\EntrySide;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\AccountingMapping;
+use App\Modules\Accounting\Models\MappingLine;
 use App\Modules\Accounting\Services\DefaultChartOfAccounts;
+use App\Modules\Accounting\Services\JournalEntryBuilder;
 use Illuminate\Auth\Events\Registered;
 use Livewire\Livewire;
 
@@ -151,6 +155,34 @@ test('una sub-cuenta hereda el tipo del padre y el padre deja de ser imputable',
     expect($child->type)->toBe(AccountType::Income)
         ->and($child->parent_id)->toBe($parent->id)
         ->and($parent->fresh()->is_postable)->toBeFalse();
+});
+
+test('no se puede eliminar una cuenta con apuntes o usada en un mapeo', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+
+    app(JournalEntryBuilder::class)->post(
+        userId: $user->id, date: '2026-09-05', description: 'Venta',
+        lines: [
+            ['side' => EntrySide::Debit, 'account_id' => $caja->id, 'amount' => '10.00', 'memo' => null],
+            ['side' => EntrySide::Credit, 'account_id' => $ventas->id, 'amount' => '10.00', 'memo' => null],
+        ],
+    );
+
+    // Con apuntes en el diario: bloqueada.
+    Livewire::test(ChartOfAccounts::class)->call('delete', $caja->id);
+    expect(Account::find($caja->id))->not->toBeNull();
+
+    // Usada en un mapeo: bloqueada.
+    $sinApuntes = Account::factory()->for($user)->create(['code' => '6.9', 'name' => 'Gasto sin uso', 'type' => 'expense']);
+    $mapping = AccountingMapping::factory()->for($user)->create();
+    MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'account_id' => $sinApuntes->id]);
+
+    Livewire::test(ChartOfAccounts::class)->call('delete', $sinApuntes->id);
+    expect(Account::find($sinApuntes->id))->not->toBeNull();
 });
 
 test('no se puede eliminar una cuenta con sub-cuentas', function () {

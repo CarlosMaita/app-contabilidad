@@ -5,6 +5,8 @@ namespace App\Modules\Accounting\Livewire;
 use App\Modules\Accounting\Enums\AccountType;
 use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\JournalLine;
+use App\Modules\Accounting\Models\MappingLine;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -150,7 +152,18 @@ class ChartOfAccounts extends Component
             return;
         }
 
-        // TODO Fase 3: bloquear si la cuenta tiene apuntes en el diario.
+        if (JournalLine::where('account_id', $account->id)->exists()) {
+            session()->flash('error', 'La cuenta tiene apuntes en el diario y no se puede eliminar. Desactivala en su lugar.');
+
+            return;
+        }
+
+        if (MappingLine::where('account_id', $account->id)->exists()) {
+            session()->flash('error', 'La cuenta se usa en un mapeo contable y no se puede eliminar. Quitala del mapeo o desactivala.');
+
+            return;
+        }
+
         $account->delete();
         session()->flash('status', 'Cuenta eliminada.');
     }
