@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Modules\Accounting\Enums\AccountType;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Services\DefaultChartOfAccounts;
 use Illuminate\Auth\Events\Registered;
 use Livewire\Livewire;
 
@@ -60,21 +61,53 @@ test('al registrarse se precarga el plan de cuentas base', function () {
 
     $accounts = Account::withoutGlobalScopes()->where('user_id', $user->id)->get();
 
-    expect($accounts)->toHaveCount(41)
+    expect($accounts)->toHaveCount(51)
         ->and($accounts->firstWhere('code', '1.1.01')->name)->toBe('Caja')
         ->and($accounts->firstWhere('code', '1')->is_postable)->toBeFalse()
         ->and($accounts->firstWhere('code', '4.1')->is_postable)->toBeFalse()
         ->and($accounts->firstWhere('code', '4.1.01')->is_postable)->toBeTrue()
+        // D&A por rubro y su contra-activo.
+        ->and($accounts->firstWhere('code', '6.2.01')->name)->toBe('Depreciación de vehículos')
+        ->and($accounts->firstWhere('code', '1.2.02.01')->name)->toBe('Depreciación acumulada de vehículos')
+        // Diferencias de cambio en las ramas financieras.
+        ->and($accounts->firstWhere('code', '4.2.02')->pnl_section->value)->toBe('financial_income')
+        ->and($accounts->firstWhere('code', '6.3.03')->pnl_section->value)->toBe('financial_expense')
         // Cada rama de resultado lleva su sección del P&L.
         ->and($accounts->firstWhere('code', '5.1')->pnl_section->value)->toBe('cogs')
         ->and($accounts->firstWhere('code', '6.2.01')->pnl_section->value)->toBe('depreciation')
-        ->and($accounts->firstWhere('code', '6.3.01')->pnl_section->value)->toBe('financial_expense')
         ->and($accounts->firstWhere('code', '6.4.01')->pnl_section->value)->toBe('tax')
         ->and($accounts->firstWhere('code', '1.1.01')->pnl_section)->toBeNull();
 
     // El evento es idempotente: no duplica el plan.
     event(new Registered($user));
-    expect(Account::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(41);
+    expect(Account::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(51);
+});
+
+test('sync-chart completa el plan de un usuario existente sin tocar sus ramas propias', function () {
+    $user = User::factory()->create();
+
+    // Plan viejo simulado: 4.1 era "Ventas" (otra semántica) y 1.2.01 ya existe como hoja.
+    Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+    Account::factory()->for($user)->create(['code' => '1.2', 'name' => 'Activo no corriente', 'type' => 'asset', 'is_postable' => false]);
+    $bienes = Account::factory()->for($user)->create(['code' => '1.2.01', 'name' => 'Bienes de uso', 'type' => 'asset', 'is_postable' => true]);
+
+    $added = DefaultChartOfAccounts::syncFor($user);
+
+    $accounts = Account::withoutGlobalScopes()->where('user_id', $user->id)->get();
+
+    // La rama 4.1 (nombre distinto) se saltó entera: sin hijas nuevas.
+    expect($accounts->firstWhere('code', '4.1')->name)->toBe('Ventas')
+        ->and($accounts->firstWhere('code', '4.1.01'))->toBeNull()
+        // Las ramas limpias sí se agregaron.
+        ->and($accounts->firstWhere('code', '6.2.01')->name)->toBe('Depreciación de vehículos')
+        ->and($accounts->firstWhere('code', '6.4.01')->pnl_section->value)->toBe('tax')
+        // 1.2.01 coincidía por nombre: recibió hijas y dejó de ser imputable.
+        ->and($accounts->firstWhere('code', '1.2.01.01')->parent_id)->toBe($bienes->id)
+        ->and($bienes->fresh()->is_postable)->toBeFalse()
+        ->and($added)->toBeGreaterThan(0);
+
+    // Idempotente: una segunda corrida no agrega nada.
+    expect(DefaultChartOfAccounts::syncFor($user))->toBe(0);
 });
 
 test('se puede crear una cuenta desde el componente livewire', function () {

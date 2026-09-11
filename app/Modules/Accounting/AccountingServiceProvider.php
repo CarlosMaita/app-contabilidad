@@ -2,6 +2,7 @@
 
 namespace App\Modules\Accounting;
 
+use App\Modules\Accounting\Console\SyncChartOfAccounts;
 use App\Modules\Accounting\Listeners\GenerateJournalEntryFromOperation;
 use App\Modules\Accounting\Listeners\SeedDefaultChartOfAccountsOnRegistration;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
@@ -49,5 +50,9 @@ class AccountingServiceProvider extends ServiceProvider
         Livewire::component('accounting.dashboard', Dashboard::class);
 
         Route::middleware('web')->group(__DIR__.'/routes.php');
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([SyncChartOfAccounts::class]);
+        }
     }
 }
