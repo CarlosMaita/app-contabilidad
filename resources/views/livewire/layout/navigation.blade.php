@@ -42,6 +42,9 @@ new class extends Component
                     <x-nav-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" wire:navigate>
                         {{ __('Plan de cuentas') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('mappings.index')" :active="request()->routeIs('mappings.*')" wire:navigate>
+                        {{ __('Mapeos') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -101,6 +104,9 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('accounts.index')" :active="request()->routeIs('accounts.*')" wire:navigate>
                 {{ __('Plan de cuentas') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('mappings.index')" :active="request()->routeIs('mappings.*')" wire:navigate>
+                {{ __('Mapeos') }}
             </x-responsive-nav-link>
         </div>
 

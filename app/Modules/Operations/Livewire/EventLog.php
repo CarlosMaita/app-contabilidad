@@ -5,6 +5,7 @@ namespace App\Modules\Operations\Livewire;
 use App\Modules\Operations\Enums\ExecutionStatus;
 use App\Modules\Operations\Models\OperationExecution;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Contracts\VoidsOperationExecutions;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -39,6 +40,16 @@ class EventLog extends Component
     public function toggleExpand(int $id): void
     {
         $this->expandedId = $this->expandedId === $id ? null : $id;
+    }
+
+    public function void(int $executionId): void
+    {
+        try {
+            app(VoidsOperationExecutions::class)->voidExecution($executionId);
+            session()->flash('status', 'Operación anulada (con contra-asiento si estaba contabilizada).');
+        } catch (\RuntimeException $e) {
+            session()->flash('error', $e->getMessage());
+        }
     }
 
     public function render()

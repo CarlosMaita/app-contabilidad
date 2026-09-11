@@ -63,11 +63,18 @@
                                             {{ $execution->status->label() }}
                                         </span>
                                     </td>
-                                    <td class="px-3 py-2 text-right">
+                                    <td class="px-3 py-2 text-right whitespace-nowrap space-x-2">
                                         <button type="button" class="text-indigo-600 hover:underline"
                                                 wire:click="toggleExpand({{ $execution->id }})">
                                             {{ $expandedId === $execution->id ? 'Ocultar' : 'Ver' }}
                                         </button>
+                                        @if ($execution->status !== \App\Modules\Operations\Enums\ExecutionStatus::Voided)
+                                            <button type="button" class="text-red-600 hover:underline"
+                                                    wire:click="void({{ $execution->id }})"
+                                                    wire:confirm="¿Anular esta ejecución? Si tiene asiento, se genera un contra-asiento.">
+                                                Anular
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                                 @if ($expandedId === $execution->id)
