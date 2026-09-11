@@ -51,6 +51,9 @@ new class extends Component
                     <x-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.*')" wire:navigate>
                         {{ __('Mayor') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')" wire:navigate>
+                        {{ __('Reportes') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -119,6 +122,9 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.*')" wire:navigate>
                 {{ __('Mayor') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')" wire:navigate>
+                {{ __('Reportes') }}
             </x-responsive-nav-link>
         </div>
 

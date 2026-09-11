@@ -1,7 +1,17 @@
 <div>
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-4">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro mayor</h2>
+            <div class="flex items-center justify-between">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">Libro mayor</h2>
+                @if ($account !== null)
+                    <div class="flex gap-2 text-sm">
+                        <a href="{{ route('exports.ledger', ['format' => 'pdf', 'account_id' => $account->id, 'from' => $from, 'to' => $to]) }}"
+                           class="text-indigo-600 hover:underline">PDF</a>
+                        <a href="{{ route('exports.ledger', ['format' => 'xlsx', 'account_id' => $account->id, 'from' => $from, 'to' => $to]) }}"
+                           class="text-indigo-600 hover:underline">XLSX</a>
+                    </div>
+                @endif
+            </div>
 
             <div class="bg-white shadow-sm sm:rounded-lg p-4 space-y-4">
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">

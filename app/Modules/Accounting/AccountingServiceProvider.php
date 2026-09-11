@@ -9,6 +9,7 @@ use App\Modules\Accounting\Livewire\GeneralLedger;
 use App\Modules\Accounting\Livewire\JournalBook;
 use App\Modules\Accounting\Livewire\MappingEditor;
 use App\Modules\Accounting\Livewire\Mappings;
+use App\Modules\Accounting\Livewire\Reports;
 use App\Modules\Accounting\Services\EloquentChartOfAccountsProvider;
 use App\Modules\Accounting\Services\OperationVoider;
 use App\Modules\Operations\Events\OperationExecuted;
@@ -41,6 +42,7 @@ class AccountingServiceProvider extends ServiceProvider
         Livewire::component('accounting.mapping-editor', MappingEditor::class);
         Livewire::component('accounting.journal-book', JournalBook::class);
         Livewire::component('accounting.general-ledger', GeneralLedger::class);
+        Livewire::component('accounting.reports', Reports::class);
 
         Route::middleware('web')->group(__DIR__.'/routes.php');
     }
