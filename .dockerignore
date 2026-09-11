@@ -3,6 +3,7 @@
 .claude
 node_modules
 vendor
+bootstrap/cache/*.php
 public/build
 public/hot
 public/storage
