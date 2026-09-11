@@ -45,6 +45,12 @@ new class extends Component
                     <x-nav-link :href="route('mappings.index')" :active="request()->routeIs('mappings.*')" wire:navigate>
                         {{ __('Mapeos') }}
                     </x-nav-link>
+                    <x-nav-link :href="route('journal.index')" :active="request()->routeIs('journal.*')" wire:navigate>
+                        {{ __('Diario') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.*')" wire:navigate>
+                        {{ __('Mayor') }}
+                    </x-nav-link>
                 </div>
             </div>
 
@@ -107,6 +113,12 @@ new class extends Component
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('mappings.index')" :active="request()->routeIs('mappings.*')" wire:navigate>
                 {{ __('Mapeos') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('journal.index')" :active="request()->routeIs('journal.*')" wire:navigate>
+                {{ __('Diario') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('ledger.index')" :active="request()->routeIs('ledger.*')" wire:navigate>
+                {{ __('Mayor') }}
             </x-responsive-nav-link>
         </div>
 

@@ -5,6 +5,8 @@ namespace App\Modules\Accounting;
 use App\Modules\Accounting\Listeners\GenerateJournalEntryFromOperation;
 use App\Modules\Accounting\Listeners\SeedDefaultChartOfAccountsOnRegistration;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
+use App\Modules\Accounting\Livewire\GeneralLedger;
+use App\Modules\Accounting\Livewire\JournalBook;
 use App\Modules\Accounting\Livewire\MappingEditor;
 use App\Modules\Accounting\Livewire\Mappings;
 use App\Modules\Accounting\Services\EloquentChartOfAccountsProvider;
@@ -37,6 +39,8 @@ class AccountingServiceProvider extends ServiceProvider
         Livewire::component('accounting.chart-of-accounts', ChartOfAccounts::class);
         Livewire::component('accounting.mappings', Mappings::class);
         Livewire::component('accounting.mapping-editor', MappingEditor::class);
+        Livewire::component('accounting.journal-book', JournalBook::class);
+        Livewire::component('accounting.general-ledger', GeneralLedger::class);
 
         Route::middleware('web')->group(__DIR__.'/routes.php');
     }

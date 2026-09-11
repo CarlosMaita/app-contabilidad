@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Models;
 
 use App\Modules\Accounting\Enums\JournalEntryStatus;
+use App\Modules\Operations\Models\OperationExecution;
 use App\Modules\Shared\Traits\BelongsToUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -47,5 +48,10 @@ class JournalEntry extends Model
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_entry_id');
+    }
+
+    public function execution(): BelongsTo
+    {
+        return $this->belongsTo(OperationExecution::class, 'operation_execution_id');
     }
 }
