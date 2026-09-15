@@ -25,6 +25,7 @@ ssh root@162.35.113.182 'APP=/home/upsofte/web/contable.upsofte.com/public_html 
   sudo -u upsofte composer install --no-dev --no-interaction --optimize-autoloader && \
   sudo -u upsofte php artisan migrate --force && \
   rm -rf $APP/public/build && mv /tmp/vite-build $APP/public/build && chown -R upsofte:upsofte $APP/public/build && \
+  find $APP/public/build -type d -exec chmod 755 {} + && find $APP/public/build -type f -exec chmod 644 {} + && \
   sudo -u upsofte php artisan config:cache && sudo -u upsofte php artisan route:cache && sudo -u upsofte php artisan view:cache'
 ```
 
