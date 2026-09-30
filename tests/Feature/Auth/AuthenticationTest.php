@@ -54,7 +54,8 @@ test('navigation menu can be rendered', function () {
     $response
         ->assertOk()
         ->assertSee('Plan de cuentas')
-        ->assertSee('Libro diario');
+        ->assertSee('Libro diario')
+        ->assertSee('aria-controls="mobile-menu"', false);
 });
 
 test('users can logout', function () {
