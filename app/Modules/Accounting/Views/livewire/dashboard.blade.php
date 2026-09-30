@@ -1,5 +1,7 @@
 <div>
-    <x-page-header title="Dashboard" route="/dashboard" />
+    <x-page-header title="Dashboard" route="/dashboard">
+        <a href="{{ route('journal.create') }}" wire:navigate class="btn-primary">Registrar asiento</a>
+    </x-page-header>
 
     <div class="flex flex-col gap-6 p-6">
         <div class="grid grid-cols-1 border-2 border-ink sm:grid-cols-2 lg:grid-cols-4">

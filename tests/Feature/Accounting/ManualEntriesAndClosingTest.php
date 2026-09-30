@@ -221,7 +221,10 @@ test('el dashboard muestra KPIs, últimos asientos y eventos por atender', funct
         'status' => ExecutionStatus::Unmapped,
     ]);
 
-    $this->get('/dashboard')->assertOk();
+    $this->get('/dashboard')
+        ->assertOk()
+        ->assertSee('Registrar asiento')
+        ->assertSee(route('journal.create'), false);
 
     Livewire::test(Dashboard::class)
         ->assertSee('Activo total')
