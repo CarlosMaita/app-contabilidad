@@ -12,6 +12,8 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
 
+        <x-pwa-head />
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -20,6 +22,7 @@
             <x-sidebar />
 
             <main class="flex min-w-0 flex-col">
+                <x-install-banner />
                 {{ $slot }}
             </main>
         </div>

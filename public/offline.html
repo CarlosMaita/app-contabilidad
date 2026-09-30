@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#201e1d">
+    <title>Sin conexión · Contabilidad</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; background: #f3f2f2; color: #201e1d;
+               font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif; }
+        main { padding: 32px; max-width: 420px; }
+        img { width: 56px; height: 56px; display: block; margin-bottom: 24px; }
+        .kicker { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #605d5d; }
+        h1 { font-size: 30px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin: 8px 0 12px; }
+        p { font-size: 14px; line-height: 1.55; color: #444141; margin: 0 0 24px; }
+        button { font: inherit; font-size: 13px; font-weight: 800; color: #fff; background: #ec3013; border: 0;
+                 border-radius: 0; padding: 10px 16px; text-align: left; cursor: pointer; }
+        button:hover { background: #dd2b0f; }
+    </style>
+</head>
+<body>
+    <main>
+        <img src="/icons/icon-192.png" alt="">
+        <div class="kicker">Sin conexión</div>
+        <h1>No hay internet.</h1>
+        <p>La app necesita conexión para mostrar y registrar tus datos contables. Nada se guarda en el teléfono, así que no se perdió ningún dato.</p>
+        <button type="button" onclick="location.reload()">Reintentar</button>
+    </main>
+</body>
+</html>

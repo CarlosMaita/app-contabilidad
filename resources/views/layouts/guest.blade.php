@@ -12,10 +12,13 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
 
+        <x-pwa-head />
+
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans">
+        <x-install-banner />
         <div class="grid min-h-screen md:grid-cols-2">
             <div class="hidden flex-col gap-6 border-r-2 border-ink p-12 md:flex">
                 <div class="text-[13px] font-extrabold uppercase tracking-[0.12em]">Contabilidad por eventos</div>
