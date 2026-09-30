@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Models;
 
 use App\Modules\Accounting\Enums\AccountType;
+use App\Modules\Accounting\Enums\CashFlowSection;
 use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Shared\Traits\BelongsToUser;
 use Database\Factories\AccountFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Account extends Model
 {
@@ -23,6 +25,7 @@ class Account extends Model
         'name',
         'type',
         'pnl_section',
+        'cash_flow_section',
         'parent_id',
         'is_postable',
         'is_auxiliary',
@@ -34,10 +37,39 @@ class Account extends Model
         return [
             'type' => AccountType::class,
             'pnl_section' => PnlSection::class,
+            'cash_flow_section' => CashFlowSection::class,
             'is_postable' => 'boolean',
             'is_auxiliary' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Actividad del flujo de efectivo efectiva: la guardada si es válida,
+     * si no la del padre (auxiliares y sub-cuentas heredan), y si no la
+     * de defecto del tipo. $byId evita consultas al recorrer muchas cuentas.
+     */
+    public function effectiveCashFlowSection(?Collection $byId = null): ?CashFlowSection
+    {
+        $valid = CashFlowSection::forType($this->type);
+
+        if ($valid === []) {
+            return null;
+        }
+
+        if ($this->cash_flow_section !== null && in_array($this->cash_flow_section, $valid, true)) {
+            return $this->cash_flow_section;
+        }
+
+        if ($this->parent_id !== null) {
+            $parent = $byId?->get($this->parent_id) ?? $this->parent;
+
+            if ($parent !== null && $parent->type === $this->type) {
+                return $parent->effectiveCashFlowSection($byId);
+            }
+        }
+
+        return CashFlowSection::defaultFor($this->type);
     }
 
     public function auxiliaries(): HasMany

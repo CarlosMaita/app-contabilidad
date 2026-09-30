@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function (): void {
 
     Route::get('/exports/balance', [ExportController::class, 'balance'])->name('exports.balance');
     Route::get('/exports/pnl', [ExportController::class, 'pnl'])->name('exports.pnl');
+    Route::get('/exports/cashflow', [ExportController::class, 'cashflow'])->name('exports.cashflow');
     Route::get('/exports/journal', [ExportController::class, 'journal'])->name('exports.journal');
     Route::get('/exports/ledger', [ExportController::class, 'ledger'])->name('exports.ledger');
 });

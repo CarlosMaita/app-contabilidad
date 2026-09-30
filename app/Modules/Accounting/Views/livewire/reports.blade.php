@@ -15,6 +15,10 @@
                     class="border border-l-0 border-ink px-3.5 py-2 text-left text-[13px] font-extrabold {{ $tab === 'pnl' ? 'bg-ink text-ground' : 'bg-transparent hover:bg-ink/5' }}">
                 Estado de resultados
             </button>
+            <button type="button" wire:click="setTab('cashflow')"
+                    class="border border-l-0 border-ink px-3.5 py-2 text-left text-[13px] font-extrabold {{ $tab === 'cashflow' ? 'bg-ink text-ground' : 'bg-transparent hover:bg-ink/5' }}">
+                Flujo de efectivo
+            </button>
         </div>
 
         @if ($tab === 'balance' && $balance)
@@ -184,6 +188,106 @@
                     @if ($pnl['margins']['net'] !== null)
                         · Margen neto: <span class="font-mono">{{ str_replace('.', ',', $pnl['margins']['net']) }}%</span>
                     @endif
+                </div>
+            </div>
+        @endif
+
+        @if ($tab === 'cashflow' && $cashflow)
+            @php($money = fn ($v) => number_format((float) $v, 2, ',', '.'))
+            @php($cf = $cashflow['sections'])
+            <div class="panel flex flex-col gap-4 p-4 sm:p-6">
+                <div class="flex flex-wrap items-end justify-between gap-4">
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div>
+                            <x-input-label value="Desde" class="text-[10px]" />
+                            <x-text-input type="date" class="mt-1 w-[150px]" wire:model.live="from" />
+                        </div>
+                        <div>
+                            <x-input-label value="Hasta" class="text-[10px]" />
+                            <x-text-input type="date" class="mt-1 w-[150px]" wire:model.live="to" />
+                        </div>
+                        <label class="flex items-center gap-2 pb-2 text-xs text-neutral-800">
+                            <input type="checkbox" wire:model.live="showZero" style="border-radius: 0;"
+                                   class="border-neutral-400 text-accent focus:ring-accent">
+                            Mostrar cuentas en cero
+                        </label>
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{{ route('exports.cashflow', ['format' => 'pdf', 'from' => $from, 'to' => $to, 'show_zero' => $showZero ? 1 : 0]) }}" class="btn-secondary">PDF</a>
+                        <a href="{{ route('exports.cashflow', ['format' => 'xlsx', 'from' => $from, 'to' => $to, 'show_zero' => $showZero ? 1 : 0]) }}" class="btn-secondary">XLSX</a>
+                    </div>
+                </div>
+
+                <p class="text-xs text-neutral-600">
+                    Método indirecto: parte del resultado neto y explica la variación de las cuentas de efectivo
+                    con la variación de las demás cuentas de balance. Los importes negativos son salidas de efectivo.
+                </p>
+
+                <table class="w-full text-[13px]">
+                    <tbody>
+                        <tr><td class="pb-1" colspan="2"><span class="kicker">Actividades operativas</span></td></tr>
+                        <tr>
+                            <td class="py-0.5 pl-3 font-semibold">Resultado neto del período</td>
+                            <td class="py-0.5 text-right font-mono font-semibold {{ (float) $cashflow['net_income'] < 0 ? 'text-accent-600' : '' }}">{{ $money($cashflow['net_income']) }}</td>
+                        </tr>
+                        @foreach (['non_cash' => 'Ajustes sin movimiento de efectivo', 'operating' => 'Variaciones en capital de trabajo'] as $key => $label)
+                            @if (count($cf[$key]['rows']) > 0)
+                                <tr><td class="pt-2 pb-0.5 pl-3 text-xs text-neutral-600" colspan="2">{{ $label }}</td></tr>
+                                @foreach ($cf[$key]['rows'] as $row)
+                                    <tr>
+                                        <td class="py-0.5 pl-7">
+                                            <span class="font-mono text-xs text-neutral-600">{{ $row['account']->code }}</span>
+                                            {{ $row['account']->name }}
+                                        </td>
+                                        <td class="py-0.5 text-right font-mono {{ (float) $row['amount'] < 0 ? 'text-accent-600' : ((float) $row['amount'] == 0 ? 'text-neutral-500' : '') }}">{{ $money($row['amount']) }}</td>
+                                    </tr>
+                                @endforeach
+                            @endif
+                        @endforeach
+                        <tr>
+                            <td class="border-t-2 border-ink py-1.5 font-extrabold">Flujo neto de actividades operativas</td>
+                            <td class="border-t-2 border-ink py-1.5 text-right font-mono font-extrabold {{ (float) $cashflow['totals']['operating'] < 0 ? 'text-accent-600' : '' }}">{{ $money($cashflow['totals']['operating']) }}</td>
+                        </tr>
+
+                        @foreach (['investing' => ['Actividades de inversión', 'Flujo neto de actividades de inversión'], 'financing' => ['Actividades de financiamiento', 'Flujo neto de actividades de financiamiento']] as $key => [$title, $totalLabel])
+                            <tr><td class="pt-4 pb-1" colspan="2"><span class="kicker">{{ $title }}</span></td></tr>
+                            @forelse ($cf[$key]['rows'] as $row)
+                                <tr>
+                                    <td class="py-0.5 pl-7">
+                                        <span class="font-mono text-xs text-neutral-600">{{ $row['account']->code }}</span>
+                                        {{ $row['account']->name }}
+                                    </td>
+                                    <td class="py-0.5 text-right font-mono {{ (float) $row['amount'] < 0 ? 'text-accent-600' : ((float) $row['amount'] == 0 ? 'text-neutral-500' : '') }}">{{ $money($row['amount']) }}</td>
+                                </tr>
+                            @empty
+                                <tr><td class="py-0.5 pl-7 text-neutral-600" colspan="2">Sin movimientos.</td></tr>
+                            @endforelse
+                            <tr>
+                                <td class="border-t-2 border-ink py-1.5 font-extrabold">{{ $totalLabel }}</td>
+                                <td class="border-t-2 border-ink py-1.5 text-right font-mono font-extrabold {{ (float) $cashflow['totals'][$key] < 0 ? 'text-accent-600' : '' }}">{{ $money($cashflow['totals'][$key]) }}</td>
+                            </tr>
+                        @endforeach
+
+                        <tr>
+                            <td class="border-t-2 border-ink pt-4 pb-1.5 font-extrabold">Variación neta del efectivo</td>
+                            <td class="border-t-2 border-ink pt-4 pb-1.5 text-right font-mono font-extrabold {{ (float) $cashflow['net_change'] < 0 ? 'text-accent-600' : '' }}">{{ $money($cashflow['net_change']) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-0.5 text-neutral-700">Efectivo al inicio del período</td>
+                            <td class="py-0.5 text-right font-mono text-neutral-700">{{ $money($cashflow['cash_opening']) }}</td>
+                        </tr>
+                        <tr>
+                            <td class="border-t border-neutral-300 py-1.5 font-extrabold">Efectivo al final del período</td>
+                            <td class="border-t border-neutral-300 py-1.5 text-right font-mono font-extrabold">{{ $money($cashflow['cash_closing']) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="border px-4 py-3 text-[13px] font-extrabold {{ $cashflow['check']['balanced'] ? 'border-ink' : 'border-accent text-accent-600' }}">
+                    Variación calculada = variación real de las cuentas de efectivo:
+                    <span class="font-mono">{{ $money($cashflow['net_change']) }}</span> vs
+                    <span class="font-mono">{{ $money($cashflow['check']['actual_change']) }}</span>
+                    {{ $cashflow['check']['balanced'] ? '✓' : '✗' }}
                 </div>
             </div>
         @endif

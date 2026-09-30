@@ -22,7 +22,7 @@
                         <th class="th">Código</th>
                         <th class="th">Nombre</th>
                         <th class="th">Tipo</th>
-                        <th class="th">Sección P&L</th>
+                        <th class="th">Clasificación</th>
                         <th class="th">Imputable</th>
                         <th class="th">Activa</th>
                         <th class="th text-right">Acciones</th>
@@ -40,7 +40,7 @@
                                 @endif
                             </td>
                             <td class="td text-neutral-700">{{ $account->type->label() }}</td>
-                            <td class="td text-xs text-neutral-700">{{ $account->effectivePnlSection()?->label() ?? '—' }}</td>
+                            <td class="td text-xs text-neutral-700">{{ ($account->effectivePnlSection() ?? $account->effectiveCashFlowSection($byId))?->label() ?? '—' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_postable ? 'Sí' : 'No' }}</td>
                             <td class="td text-neutral-700">{{ $account->is_active ? 'Sí' : 'No' }}</td>
                             <td class="td whitespace-nowrap text-right">
@@ -109,6 +109,21 @@
                                 {{ $parent_id ? 'Hereda la sección de la cuenta padre.' : 'Define en qué línea de la cascada del P&L suma esta cuenta.' }}
                             </p>
                             <x-input-error :messages="$errors->get('pnl_section')" class="mt-1" />
+                        </div>
+                    @endif
+
+                    @if (count($cashFlowOptions) > 0)
+                        <div>
+                            <x-input-label for="cash_flow_section" value="Actividad en el flujo de efectivo" />
+                            <select id="cash_flow_section" wire:model="cash_flow_section" @disabled($parent_id) class="wf-input mt-1.5">
+                                @foreach ($cashFlowOptions as $option)
+                                    <option value="{{ $option->value }}">{{ $option->label() }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-neutral-600">
+                                {{ $parent_id ? 'Hereda la actividad de la cuenta padre.' : 'Caja y bancos van como «Efectivo»; su variación es la que explica el estado.' }}
+                            </p>
+                            <x-input-error :messages="$errors->get('cash_flow_section')" class="mt-1" />
                         </div>
                     @endif
 

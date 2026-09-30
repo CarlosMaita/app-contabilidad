@@ -53,7 +53,7 @@ class Reports extends Component
 
     public function setTab(string $tab): void
     {
-        $this->tab = in_array($tab, ['balance', 'pnl'], true) ? $tab : 'balance';
+        $this->tab = in_array($tab, ['balance', 'pnl', 'cashflow'], true) ? $tab : 'balance';
     }
 
     public function render(ReportService $reports)
@@ -66,6 +66,9 @@ class Reports extends Component
                 : null,
             'pnl' => $this->tab === 'pnl'
                 ? $reports->profitAndLoss($userId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
+                : null,
+            'cashflow' => $this->tab === 'cashflow'
+                ? $reports->cashFlow($userId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
                 : null,
         ]);
     }

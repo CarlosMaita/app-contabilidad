@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Enums\AccountType;
+use App\Modules\Accounting\Enums\CashFlowSection;
 use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalLine;
@@ -28,6 +29,8 @@ class ChartOfAccounts extends Component
     public string $type = AccountType::Asset->value;
 
     public string $pnl_section = '';
+
+    public string $cash_flow_section = '';
 
     public ?string $parent_id = null;
 
@@ -55,6 +58,7 @@ class ChartOfAccounts extends Component
             $this->parent_id = (string) $parent->id;
             $this->type = $parent->type->value;
             $this->pnl_section = $parent->effectivePnlSection()?->value ?? '';
+            $this->cash_flow_section = $parent->effectiveCashFlowSection()?->value ?? '';
             $this->code = $parent->code.'.';
         }
 
@@ -64,6 +68,7 @@ class ChartOfAccounts extends Component
     public function updatedType(string $value): void
     {
         $this->pnl_section = PnlSection::defaultFor(AccountType::from($value))?->value ?? '';
+        $this->cash_flow_section = CashFlowSection::defaultFor(AccountType::from($value))?->value ?? '';
     }
 
     public function edit(int $id): void
@@ -76,6 +81,7 @@ class ChartOfAccounts extends Component
         $this->name = $account->name;
         $this->type = $account->type->value;
         $this->pnl_section = $account->effectivePnlSection()?->value ?? '';
+        $this->cash_flow_section = $account->effectiveCashFlowSection()?->value ?? '';
         $this->parent_id = $account->parent_id !== null ? (string) $account->parent_id : null;
         $this->is_postable = $account->is_postable;
         $this->is_auxiliary = $account->is_auxiliary;
@@ -101,12 +107,17 @@ class ChartOfAccounts extends Component
                 'nullable',
                 Rule::in(array_map(fn (PnlSection $s) => $s->value, PnlSection::forType(AccountType::from($this->type)))),
             ],
+            'cash_flow_section' => [
+                'nullable',
+                Rule::in(array_map(fn (CashFlowSection $s) => $s->value, CashFlowSection::forType(AccountType::from($this->type)))),
+            ],
             'parent_id' => ['nullable', 'integer'],
             'is_postable' => ['boolean'],
             'is_auxiliary' => ['boolean'],
             'is_active' => ['boolean'],
         ], [
             'pnl_section.in' => 'La sección del P&L no corresponde al tipo de cuenta.',
+            'cash_flow_section.in' => 'La actividad del flujo de efectivo no corresponde al tipo de cuenta.',
         ], [
             'code' => 'código',
             'name' => 'nombre',
@@ -134,6 +145,7 @@ class ChartOfAccounts extends Component
             // Una sub-cuenta hereda el tipo y la sección del P&L de su padre.
             $validated['type'] = $parent->type->value;
             $validated['pnl_section'] = $parent->effectivePnlSection()?->value;
+            $validated['cash_flow_section'] = $parent->effectiveCashFlowSection()?->value;
         }
 
         $validated['parent_id'] = $parent?->id;
@@ -148,6 +160,12 @@ class ChartOfAccounts extends Component
             $validated['pnl_section'] = null;
         } elseif (empty($validated['pnl_section'])) {
             $validated['pnl_section'] = PnlSection::defaultFor($finalType)?->value;
+        }
+
+        if (CashFlowSection::forType($finalType) === []) {
+            $validated['cash_flow_section'] = null;
+        } elseif (empty($validated['cash_flow_section'])) {
+            $validated['cash_flow_section'] = CashFlowSection::defaultFor($finalType)?->value;
         }
 
         if ($this->editingId !== null) {
@@ -198,11 +216,15 @@ class ChartOfAccounts extends Component
 
     public function render()
     {
+        $all = Account::orderBy('code')->get();
+
         return view('accounting::livewire.chart-of-accounts', [
             'rows' => $this->rows(),
-            'parentOptions' => Account::orderBy('code')->get(),
+            'parentOptions' => $all,
+            'byId' => $all->keyBy('id'),
             'types' => AccountType::cases(),
             'pnlOptions' => PnlSection::forType(AccountType::from($this->type)),
+            'cashFlowOptions' => CashFlowSection::forType(AccountType::from($this->type)),
         ]);
     }
 
@@ -259,6 +281,7 @@ class ChartOfAccounts extends Component
         $this->reset(['editingId', 'code', 'name', 'parent_id']);
         $this->type = AccountType::Asset->value;
         $this->pnl_section = '';
+        $this->cash_flow_section = CashFlowSection::defaultFor(AccountType::Asset)->value;
         $this->is_auxiliary = false;
         $this->is_postable = true;
         $this->is_active = true;

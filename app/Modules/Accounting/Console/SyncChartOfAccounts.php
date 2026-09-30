@@ -10,7 +10,7 @@ class SyncChartOfAccounts extends Command
 {
     protected $signature = 'accounting:sync-chart {--user= : Solo este usuario (id o email)}';
 
-    protected $description = 'Agrega a los usuarios existentes las cuentas del plan base que les falten (idempotente)';
+    protected $description = 'Agrega a los usuarios existentes las cuentas del plan base que les falten y clasifica sus cuentas de balance para el flujo de efectivo (idempotente)';
 
     public function handle(): int
     {
@@ -30,7 +30,8 @@ class SyncChartOfAccounts extends Command
 
         foreach ($users as $user) {
             $added = DefaultChartOfAccounts::syncFor($user);
-            $this->line("{$user->email}: {$added} cuenta(s) agregada(s)");
+            $classified = DefaultChartOfAccounts::classifyFor($user);
+            $this->line("{$user->email}: {$added} cuenta(s) agregada(s), {$classified} clasificada(s) para el flujo de efectivo");
         }
 
         return self::SUCCESS;

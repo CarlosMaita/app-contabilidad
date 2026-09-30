@@ -15,36 +15,43 @@ use Illuminate\Support\Facades\DB;
  */
 class DefaultChartOfAccounts
 {
-    /** @var array<int, array{0: string, 1: string, 2: string, 3: ?string, 4: ?string}> [code, name, type, parentCode, pnlSection] */
+    /**
+     * [code, name, type, parentCode, clasificación]. La clasificación es la
+     * sección del P&L en cuentas de resultado y la actividad del flujo de
+     * efectivo en cuentas de balance (null = hereda del padre o del tipo).
+     *
+     * @var array<int, array{0: string, 1: string, 2: string, 3: ?string, 4: ?string}>
+     */
     private const ACCOUNTS = [
         // Activo
         ['1', 'Activo', 'asset', null, null],
         ['1.1', 'Activo corriente', 'asset', '1', null],
-        ['1.1.01', 'Caja', 'asset', '1.1', null],
-        ['1.1.02', 'Bancos', 'asset', '1.1', null],
-        ['1.1.03', 'Clientes por cobrar', 'asset', '1.1', null],
-        ['1.1.04', 'IVA crédito fiscal', 'asset', '1.1', null],
-        ['1.2', 'Activo no corriente', 'asset', '1', null],
-        ['1.2.01', 'Bienes de uso', 'asset', '1.2', null],
-        ['1.2.01.01', 'Vehículos', 'asset', '1.2.01', null],
-        ['1.2.01.02', 'Equipos e instalaciones', 'asset', '1.2.01', null],
-        ['1.2.01.03', 'Intangibles', 'asset', '1.2.01', null],
+        ['1.1.01', 'Caja', 'asset', '1.1', 'cash'],
+        ['1.1.02', 'Bancos', 'asset', '1.1', 'cash'],
+        ['1.1.03', 'Clientes por cobrar', 'asset', '1.1', 'operating'],
+        ['1.1.04', 'IVA crédito fiscal', 'asset', '1.1', 'operating'],
+        ['1.2', 'Activo no corriente', 'asset', '1', 'investing'],
+        ['1.2.01', 'Bienes de uso', 'asset', '1.2', 'investing'],
+        ['1.2.01.01', 'Vehículos', 'asset', '1.2.01', 'investing'],
+        ['1.2.01.02', 'Equipos e instalaciones', 'asset', '1.2.01', 'investing'],
+        ['1.2.01.03', 'Intangibles', 'asset', '1.2.01', 'investing'],
         // Contra-activo: acumula con saldo acreedor y resta del activo.
-        ['1.2.02', 'Depreciación acumulada', 'asset', '1.2', null],
-        ['1.2.02.01', 'Depreciación acumulada de vehículos', 'asset', '1.2.02', null],
-        ['1.2.02.02', 'Depreciación acumulada de equipos e instalaciones', 'asset', '1.2.02', null],
-        ['1.2.02.03', 'Amortización acumulada de intangibles', 'asset', '1.2.02', null],
+        // En el flujo es el ajuste de la depreciación (gasto sin salida de caja).
+        ['1.2.02', 'Depreciación acumulada', 'asset', '1.2', 'non_cash'],
+        ['1.2.02.01', 'Depreciación acumulada de vehículos', 'asset', '1.2.02', 'non_cash'],
+        ['1.2.02.02', 'Depreciación acumulada de equipos e instalaciones', 'asset', '1.2.02', 'non_cash'],
+        ['1.2.02.03', 'Amortización acumulada de intangibles', 'asset', '1.2.02', 'non_cash'],
         // Pasivo
         ['2', 'Pasivo', 'liability', null, null],
         ['2.1', 'Pasivo corriente', 'liability', '2', null],
-        ['2.1.01', 'Proveedores por pagar', 'liability', '2.1', null],
-        ['2.1.02', 'IVA débito fiscal', 'liability', '2.1', null],
-        ['2.1.03', 'Préstamos por pagar', 'liability', '2.1', null],
-        ['2.1.04', 'Impuesto a las ganancias por pagar', 'liability', '2.1', null],
+        ['2.1.01', 'Proveedores por pagar', 'liability', '2.1', 'operating'],
+        ['2.1.02', 'IVA débito fiscal', 'liability', '2.1', 'operating'],
+        ['2.1.03', 'Préstamos por pagar', 'liability', '2.1', 'financing'],
+        ['2.1.04', 'Impuesto a las ganancias por pagar', 'liability', '2.1', 'operating'],
         // Patrimonio
-        ['3', 'Patrimonio', 'equity', null, null],
-        ['3.1', 'Capital', 'equity', '3', null],
-        ['3.2', 'Resultados acumulados', 'equity', '3', null],
+        ['3', 'Patrimonio', 'equity', null, 'financing'],
+        ['3.1', 'Capital', 'equity', '3', 'financing'],
+        ['3.2', 'Resultados acumulados', 'equity', '3', 'financing'],
         // Ingresos: cada rama raíz es una sección del P&L
         ['4.1', 'Ingresos operativos', 'income', null, 'operating_income'],
         ['4.1.01', 'Ventas', 'income', '4.1', 'operating_income'],
@@ -83,19 +90,66 @@ class DefaultChartOfAccounts
             $parentCodes = array_filter(array_column(self::ACCOUNTS, 3));
             $created = [];
 
-            foreach (self::ACCOUNTS as [$code, $name, $type, $parentCode, $pnlSection]) {
+            foreach (self::ACCOUNTS as [$code, $name, $type, $parentCode, $section]) {
                 $created[$code] = Account::withoutGlobalScopes()->create([
                     'user_id' => $user->id,
                     'code' => $code,
                     'name' => $name,
                     'type' => $type,
-                    'pnl_section' => $pnlSection,
+                    ...self::classification($type, $section),
                     'parent_id' => $parentCode !== null ? $created[$parentCode]->id : null,
                     'is_postable' => ! in_array($code, $parentCodes, true),
                     'is_active' => true,
                 ]);
             }
         });
+    }
+
+    /**
+     * Asigna la actividad del flujo de efectivo a las cuentas de balance
+     * de un usuario existente que coinciden con el plan base (mismo código,
+     * nombre y tipo) y todavía no la tienen. No pisa clasificaciones hechas
+     * a mano ni toca cuentas con otra semántica.
+     *
+     * @return int cantidad de cuentas clasificadas
+     */
+    public static function classifyFor(User $user): int
+    {
+        $existing = Account::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->whereNull('cash_flow_section')
+            ->get()
+            ->keyBy('code');
+
+        $classified = 0;
+
+        foreach (self::ACCOUNTS as [$code, $name, $type, , $section]) {
+            $current = $existing->get($code);
+            $cashFlow = self::classification($type, $section)['cash_flow_section'];
+
+            if ($current === null || $cashFlow === null
+                || $current->name !== $name || $current->type->value !== $type) {
+                continue;
+            }
+
+            $current->update(['cash_flow_section' => $cashFlow]);
+            $classified++;
+        }
+
+        return $classified;
+    }
+
+    /**
+     * @return array{pnl_section: ?string, cash_flow_section: ?string}
+     */
+    private static function classification(string $type, ?string $section): array
+    {
+        $isResult = in_array($type, ['income', 'expense'], true);
+
+        return [
+            'pnl_section' => $isResult ? $section : null,
+            'cash_flow_section' => $isResult ? null : $section,
+        ];
     }
 
     /**
@@ -123,7 +177,7 @@ class DefaultChartOfAccounts
             $blocked = [];
             $added = 0;
 
-            foreach (self::ACCOUNTS as [$code, $name, $type, $parentCode, $pnlSection]) {
+            foreach (self::ACCOUNTS as [$code, $name, $type, $parentCode, $section]) {
                 if ($parentCode !== null && isset($blocked[$parentCode])) {
                     $blocked[$code] = true;
 
@@ -151,7 +205,7 @@ class DefaultChartOfAccounts
                     'code' => $code,
                     'name' => $name,
                     'type' => $type,
-                    'pnl_section' => $pnlSection,
+                    ...self::classification($type, $section),
                     'parent_id' => $parent?->id,
                     'is_postable' => ! in_array($code, $parentCodes, true),
                     'is_active' => true,

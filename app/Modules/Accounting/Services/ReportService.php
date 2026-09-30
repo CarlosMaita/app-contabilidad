@@ -3,10 +3,12 @@
 namespace App\Modules\Accounting\Services;
 
 use App\Modules\Accounting\Enums\AccountType;
+use App\Modules\Accounting\Enums\CashFlowSection;
 use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalLine;
 use App\Modules\Shared\Money\Money;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -164,6 +166,130 @@ class ReportService
                 fn (string $carry, PnlSection $s): string => Money::add($carry, $t($s)),
                 '0.00',
             ),
+        ];
+    }
+
+    /**
+     * Estado de flujo de efectivo del rango, método indirecto.
+     *
+     * Parte del resultado neto y suma la variación de cada cuenta de
+     * balance que no es efectivo, medida como haber − debe del período
+     * (un aumento de activo resta caja; un aumento de pasivo o patrimonio
+     * la suma). Por partida doble la variación calculada coincide con la
+     * variación real de las cuentas de efectivo, que se muestra como check.
+     * Las auxiliares se consolidan en su cuenta principal.
+     *
+     * @return array{
+     *   from: ?string,
+     *   to: string,
+     *   net_income: string,
+     *   sections: array<string, array{rows: array<int, array{account: Account, amount: string}>, total: string}>,
+     *   totals: array{operating: string, investing: string, financing: string},
+     *   net_change: string,
+     *   cash_opening: string,
+     *   cash_closing: string,
+     *   check: array{actual_change: string, balanced: bool}
+     * }
+     */
+    public function cashFlow(int $userId, ?string $from, string $to, bool $includeZero = false): array
+    {
+        $accounts = Account::withoutGlobalScopes()
+            ->where('user_id', $userId)
+            ->whereIn('type', [AccountType::Asset, AccountType::Liability, AccountType::Equity])
+            ->orderBy('code')
+            ->get();
+        $byId = $accounts->keyBy('id');
+        $sectionOf = $accounts->mapWithKeys(fn (Account $a): array => [$a->id => $a->effectiveCashFlowSection($byId)]);
+
+        $period = $this->balancesByAccount($userId, $from, $to);
+        $impact = fn (int $id): string => isset($period[$id])
+            ? bcsub($period[$id]['credit'], $period[$id]['debit'], 2)
+            : '0.00';
+
+        $sections = [];
+        foreach ([CashFlowSection::NonCash, CashFlowSection::Operating, CashFlowSection::Investing, CashFlowSection::Financing] as $section) {
+            $sections[$section->value] = ['rows' => [], 'total' => '0.00'];
+        }
+
+        $cashIds = [];
+
+        foreach ($accounts as $account) {
+            $section = $sectionOf[$account->id];
+
+            if ($section === CashFlowSection::Cash) {
+                $cashIds[] = $account->id;
+
+                continue;
+            }
+
+            if ($account->is_auxiliary) {
+                continue;
+            }
+
+            $amount = $impact($account->id);
+            foreach ($accounts->where('parent_id', $account->id)->where('is_auxiliary', true) as $aux) {
+                if ($sectionOf[$aux->id] !== CashFlowSection::Cash) {
+                    $amount = Money::add($amount, $impact($aux->id));
+                }
+            }
+
+            $isLeaf = $account->is_postable || $accounts->contains(fn (Account $a) => $a->parent_id === $account->id && $a->is_auxiliary);
+
+            if (Money::isZero($amount) && ! ($includeZero && $isLeaf)) {
+                continue;
+            }
+
+            $sections[$section->value]['rows'][] = ['account' => $account, 'amount' => $amount];
+            $sections[$section->value]['total'] = Money::add($sections[$section->value]['total'], $amount);
+        }
+
+        $netIncome = $this->profitAndLoss($userId, $from, $to)['lines']['net'];
+
+        $operating = Money::add($netIncome, Money::add(
+            $sections[CashFlowSection::NonCash->value]['total'],
+            $sections[CashFlowSection::Operating->value]['total'],
+        ));
+        $investing = $sections[CashFlowSection::Investing->value]['total'];
+        $financing = $sections[CashFlowSection::Financing->value]['total'];
+        $netChange = Money::add($operating, Money::add($investing, $financing));
+
+        $cashBalance = function (?string $until) use ($userId, $cashIds): string {
+            if ($until === null) {
+                return '0.00';
+            }
+
+            $sums = $this->balancesByAccount($userId, null, $until);
+
+            return array_reduce(
+                $cashIds,
+                fn (string $carry, int $id): string => isset($sums[$id])
+                    ? Money::add($carry, bcsub($sums[$id]['debit'], $sums[$id]['credit'], 2))
+                    : $carry,
+                '0.00',
+            );
+        };
+
+        $opening = $cashBalance($from !== null ? Carbon::parse($from)->subDay()->toDateString() : null);
+        $closing = $cashBalance($to);
+        $actualChange = bcsub($closing, $opening, 2);
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'net_income' => $netIncome,
+            'sections' => $sections,
+            'totals' => [
+                'operating' => $operating,
+                'investing' => $investing,
+                'financing' => $financing,
+            ],
+            'net_change' => $netChange,
+            'cash_opening' => $opening,
+            'cash_closing' => $closing,
+            'check' => [
+                'actual_change' => $actualChange,
+                'balanced' => Money::equals($netChange, $actualChange),
+            ],
         ];
     }
 

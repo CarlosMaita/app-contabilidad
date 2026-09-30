@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Http;
 
 use App\Modules\Accounting\Exports\BalanceSheetExport;
+use App\Modules\Accounting\Exports\CashFlowExport;
 use App\Modules\Accounting\Exports\GeneralLedgerExport;
 use App\Modules\Accounting\Exports\JournalBookExport;
 use App\Modules\Accounting\Exports\ProfitAndLossExport;
@@ -53,6 +54,26 @@ class ExportController extends Controller
         }
 
         return Pdf::loadView('accounting::pdf.profit-and-loss', ['report' => $report])
+            ->download("{$filename}.pdf");
+    }
+
+    public function cashflow(Request $request, ReportService $reports)
+    {
+        $validated = $request->validate([
+            'format' => ['required', 'in:pdf,xlsx'],
+            'from' => ['nullable', 'date'],
+            'to' => ['required', 'date'],
+            'show_zero' => ['nullable', 'boolean'],
+        ]);
+
+        $report = $reports->cashFlow($request->user()->id, $validated['from'] ?? null, $validated['to'], (bool) ($validated['show_zero'] ?? false));
+        $filename = "flujo-de-efectivo-{$validated['to']}";
+
+        if ($validated['format'] === 'xlsx') {
+            return Excel::download(new CashFlowExport($report), "{$filename}.xlsx");
+        }
+
+        return Pdf::loadView('accounting::pdf.cash-flow', ['report' => $report])
             ->download("{$filename}.pdf");
     }
 
