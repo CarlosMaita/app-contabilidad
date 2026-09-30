@@ -1,7 +1,5 @@
 <div>
-    <x-page-header title="Dashboard" route="/dashboard">
-        <a href="{{ route('journal.create') }}" wire:navigate class="btn-primary">Registrar asiento</a>
-    </x-page-header>
+    <x-page-header title="Dashboard" route="/dashboard" />
 
     <div class="flex flex-col gap-6 p-6">
         <div class="grid grid-cols-1 border-2 border-ink sm:grid-cols-2 lg:grid-cols-4">
@@ -35,7 +33,10 @@
             <div class="panel min-w-0">
                 <div class="panel-head">
                     <span class="panel-title">Últimos asientos</span>
-                    <a href="{{ route('journal.index') }}" wire:navigate class="btn-secondary ml-auto">Ver el diario</a>
+                    <div class="ml-auto flex gap-2">
+                        <a href="{{ route('journal.index') }}" wire:navigate class="btn-secondary">Ver el diario</a>
+                        <a href="{{ route('journal.create') }}" wire:navigate class="btn-primary">Registrar asiento</a>
+                    </div>
                 </div>
                 <table class="w-full border-collapse text-[13px]">
                     <tbody>
