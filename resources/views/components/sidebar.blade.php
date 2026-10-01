@@ -2,6 +2,7 @@
     $groups = [
         'General' => [
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard'],
+            ['label' => 'Saldos de cuentas', 'route' => 'balances.index', 'active' => 'balances.*'],
         ],
         'Operativo' => [
             ['label' => 'Tipos de operación', 'route' => 'operations.index', 'active' => 'operations.*'],

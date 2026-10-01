@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Accounting\Http\ExportController;
+use App\Modules\Accounting\Livewire\AccountBalances;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
 use App\Modules\Accounting\Livewire\GeneralLedger;
 use App\Modules\Accounting\Livewire\JournalBook;
@@ -12,6 +13,7 @@ use App\Modules\Accounting\Livewire\SubledgerBook;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/balances', AccountBalances::class)->name('balances.index');
     Route::get('/accounts', ChartOfAccounts::class)->name('accounts.index');
     Route::get('/mappings', Mappings::class)->name('mappings.index');
     Route::get('/mappings/{operationType}', MappingEditor::class)->name('mappings.edit');

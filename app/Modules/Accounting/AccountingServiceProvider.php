@@ -5,6 +5,7 @@ namespace App\Modules\Accounting;
 use App\Modules\Accounting\Console\SyncChartOfAccounts;
 use App\Modules\Accounting\Listeners\GenerateJournalEntryFromOperation;
 use App\Modules\Accounting\Listeners\SeedDefaultChartOfAccountsOnRegistration;
+use App\Modules\Accounting\Livewire\AccountBalances;
 use App\Modules\Accounting\Livewire\ChartOfAccounts;
 use App\Modules\Accounting\Livewire\Dashboard;
 use App\Modules\Accounting\Livewire\GeneralLedger;
@@ -50,6 +51,7 @@ class AccountingServiceProvider extends ServiceProvider
         Livewire::component('accounting.reports', Reports::class);
         Livewire::component('accounting.manual-entry-form', ManualEntryForm::class);
         Livewire::component('accounting.dashboard', Dashboard::class);
+        Livewire::component('accounting.account-balances', AccountBalances::class);
 
         Route::middleware('web')->group(__DIR__.'/routes.php');
 

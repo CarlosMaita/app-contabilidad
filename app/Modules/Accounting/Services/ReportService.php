@@ -294,6 +294,89 @@ class ReportService
     }
 
     /**
+     * Saldos de las cuentas con movimientos propios a una fecha (inclusive),
+     * agrupados por tipo. El saldo se expresa según la naturaleza de la
+     * cuenta; además se clasifica como deudor o acreedor para el control
+     * de sumas iguales. Las cuentas en cero se omiten.
+     *
+     * @return array{
+     *   as_of: string,
+     *   groups: array<string, array{label: string, rows: array<int, array{account: Account, balance: string, side: string}>, total: string}>,
+     *   debit_total: string,
+     *   credit_total: string,
+     *   balanced: bool,
+     *   count: int
+     * }
+     */
+    public function accountBalances(int $userId, string $asOf, string $search = ''): array
+    {
+        $sums = $this->balancesByAccount($userId, null, $asOf);
+        $term = mb_strtolower(trim($search));
+
+        $accounts = Account::withoutGlobalScopes()
+            ->where('user_id', $userId)
+            ->whereIn('id', array_keys($sums))
+            ->orderBy('code')
+            ->get();
+
+        $headings = [
+            AccountType::Asset->value => 'Activo',
+            AccountType::Liability->value => 'Pasivo',
+            AccountType::Equity->value => 'Patrimonio',
+            AccountType::Income->value => 'Ingresos',
+            AccountType::Expense->value => 'Gastos',
+        ];
+
+        $groups = [];
+        foreach (AccountType::cases() as $type) {
+            $groups[$type->value] = ['label' => $headings[$type->value], 'rows' => [], 'total' => '0.00'];
+        }
+
+        $debitTotal = '0.00';
+        $creditTotal = '0.00';
+        $count = 0;
+
+        foreach ($accounts as $account) {
+            $net = bcsub($sums[$account->id]['debit'], $sums[$account->id]['credit'], 2);
+
+            if (Money::isZero($net)) {
+                continue;
+            }
+
+            // Los totales de control incluyen todas las cuentas aunque haya búsqueda.
+            if (Money::isNegative($net)) {
+                $creditTotal = Money::add($creditTotal, bcmul($net, '-1', 2));
+            } else {
+                $debitTotal = Money::add($debitTotal, $net);
+            }
+
+            if ($term !== '' && ! str_contains(mb_strtolower($account->code.' '.$account->name), $term)) {
+                continue;
+            }
+
+            $balance = $account->type->isDebitNature() ? $net : bcmul($net, '-1', 2);
+            $type = $account->type->value;
+
+            $groups[$type]['rows'][] = [
+                'account' => $account,
+                'balance' => $balance,
+                'side' => Money::isNegative($net) ? 'credit' : 'debit',
+            ];
+            $groups[$type]['total'] = Money::add($groups[$type]['total'], $balance);
+            $count++;
+        }
+
+        return [
+            'as_of' => $asOf,
+            'groups' => $groups,
+            'debit_total' => $debitTotal,
+            'credit_total' => $creditTotal,
+            'balanced' => Money::equals($debitTotal, $creditTotal),
+            'count' => $count,
+        ];
+    }
+
+    /**
      * @return Collection<int, Account>
      */
     private function accountsOfType(int $userId, AccountType $type): Collection
