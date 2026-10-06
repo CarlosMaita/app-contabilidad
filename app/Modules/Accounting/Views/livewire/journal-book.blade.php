@@ -63,6 +63,9 @@
                                 <button type="button" class="btn-ghost text-xs" wire:click="toggleExpand({{ $entry->id }})">
                                     {{ $expandedId === $entry->id ? 'Ocultar' : 'Ver' }}
                                 </button>
+                                <a href="{{ route('journal.create', ['duplicate' => $entry->id]) }}" wire:navigate class="btn-ghost text-xs">
+                                    Duplicar
+                                </a>
                                 @if ($entry->status->value === 'posted')
                                     <button type="button" class="btn-ghost text-xs" wire:click="reverse({{ $entry->id }})"
                                             wire:confirm="¿Revertir el asiento #{{ $entry->number }}? Se genera un contra-asiento{{ $entry->operation_execution_id ? ' y se anula la operación de origen' : '' }}.">

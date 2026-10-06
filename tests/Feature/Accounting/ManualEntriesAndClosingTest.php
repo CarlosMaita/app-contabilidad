@@ -232,3 +232,53 @@ test('el dashboard muestra KPIs, últimos asientos y eventos por atender', funct
         ->assertSee('Venta del mes')
         ->assertSee('1 evento(s) sin contabilizar');
 });
+
+test('duplicar un asiento pre-rellena el formulario sin registrar nada', function () {
+    $user = User::factory()->create();
+    $s = setupManual($user);
+    $this->actingAs($user);
+
+    $entry = app(JournalEntryBuilder::class)->post(
+        userId: $user->id, date: '2026-08-15', description: 'Pago de luz',
+        lines: [
+            ['side' => EntrySide::Debit, 'account_id' => $s['gastos']->id, 'amount' => '120.50', 'memo' => 'factura agosto'],
+            ['side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount' => '120.50', 'memo' => null],
+        ],
+    );
+
+    Livewire::test(JournalBook::class)
+        ->assertSee(e(route('journal.create', ['duplicate' => $entry->id])), false);
+
+    Livewire::withQueryParams(['duplicate' => $entry->id])
+        ->test(ManualEntryForm::class)
+        ->assertSet('description', 'Pago de luz')
+        ->assertSet('date', now()->toDateString())
+        ->assertSet('duplicatedFrom', $entry->number)
+        ->assertSet('lines', [
+            ['side' => 'debit', 'account_id' => (string) $s['gastos']->id, 'amount' => '120.50', 'memo' => 'factura agosto'],
+            ['side' => 'credit', 'account_id' => (string) $s['caja']->id, 'amount' => '120.50', 'memo' => ''],
+        ])
+        ->assertSee('Datos copiados del asiento');
+
+    expect(JournalEntry::count())->toBe(1);
+});
+
+test('no se puede duplicar un asiento de otro usuario', function () {
+    $owner = User::factory()->create();
+    $s = setupManual($owner);
+    $entry = app(JournalEntryBuilder::class)->post(
+        userId: $owner->id, date: '2026-08-15', description: 'Ajeno',
+        lines: [
+            ['side' => EntrySide::Debit, 'account_id' => $s['gastos']->id, 'amount' => '10.00', 'memo' => null],
+            ['side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount' => '10.00', 'memo' => null],
+        ],
+    );
+
+    $this->actingAs(User::factory()->create());
+
+    Livewire::withQueryParams(['duplicate' => $entry->id])
+        ->test(ManualEntryForm::class)
+        ->assertSet('description', '')
+        ->assertSet('duplicatedFrom', null)
+        ->assertCount('lines', 2);
+});

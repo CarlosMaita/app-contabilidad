@@ -9,6 +9,13 @@
             </p>
         </div>
 
+        @if ($duplicatedFrom)
+            <div class="note-accent text-sm">
+                Datos copiados del asiento <span class="font-mono font-extrabold">#{{ $duplicatedFrom }}</span>.
+                Revisá fecha, montos y cuentas antes de registrar: el asiento no se crea hasta que lo guardes.
+            </div>
+        @endif
+
         <form wire:submit="save" class="flex flex-col gap-4">
             <div class="panel grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
                 <div>

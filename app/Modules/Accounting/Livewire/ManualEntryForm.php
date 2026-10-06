@@ -7,6 +7,7 @@ use App\Modules\Accounting\Exceptions\ClosedPeriodException;
 use App\Modules\Accounting\Exceptions\MappingResolutionException;
 use App\Modules\Accounting\Exceptions\UnbalancedEntryException;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\JournalEntryBuilder;
 use App\Modules\Shared\Money\Money;
 use Illuminate\Validation\Rule;
@@ -25,11 +26,36 @@ class ManualEntryForm extends Component
     /** @var array<int, array{side: string, account_id: string, amount: string, memo: string}> */
     public array $lines = [];
 
+    /** Número del asiento usado como plantilla (?duplicate={id}); solo informativo. */
+    public ?int $duplicatedFrom = null;
+
     public function mount(): void
     {
         $this->date = now()->toDateString();
-        $this->addLine('debit');
-        $this->addLine('credit');
+
+        $source = request()->integer('duplicate')
+            ? JournalEntry::with('lines')->find(request()->integer('duplicate'))
+            : null;
+
+        if ($source === null) {
+            $this->addLine('debit');
+            $this->addLine('credit');
+
+            return;
+        }
+
+        // Pre-rellena con los datos del asiento original; no se registra nada
+        // hasta que el usuario guarde. La fecha queda en hoy.
+        $postableIds = Account::postable()->pluck('id')->all();
+
+        $this->duplicatedFrom = $source->number;
+        $this->description = $source->description;
+        $this->lines = $source->lines->map(fn ($line): array => [
+            'side' => $line->debit != 0 ? 'debit' : 'credit',
+            'account_id' => in_array((int) $line->account_id, array_map('intval', $postableIds), true) ? (string) $line->account_id : '',
+            'amount' => (string) ($line->debit != 0 ? $line->debit : $line->credit),
+            'memo' => (string) $line->memo,
+        ])->all();
     }
 
     public function addLine(string $side): void
