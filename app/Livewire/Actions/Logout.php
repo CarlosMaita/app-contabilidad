@@ -12,9 +12,16 @@ class Logout
      */
     public function __invoke(): void
     {
+        $user = Auth::guard('web')->user();
+
         Auth::guard('web')->logout();
 
         Session::invalidate();
         Session::regenerateToken();
+
+        // Las cuentas demo son descartables: se borran al salir.
+        if ($user?->is_demo && $user->exists) {
+            $user->delete();
+        }
     }
 }

@@ -22,6 +22,12 @@
             <x-sidebar />
 
             <main class="flex min-w-0 flex-col">
+                @if (auth()->user()?->is_demo)
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b-2 border-ink bg-accent-100 px-4 py-2 text-[13px] sm:px-6">
+                        <span class="badge border-accent text-accent">Demo</span>
+                        <span>Estás viendo una cuenta de prueba con datos de ejemplo. Podés cambiar lo que quieras: se borra al salir o a las {{ \App\Demo\DemoSandbox::LIFETIME_HOURS }} h.</span>
+                    </div>
+                @endif
                 <x-install-banner />
                 {{ $slot }}
             </main>

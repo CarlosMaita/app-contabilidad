@@ -28,6 +28,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'accounting_closed_until' => 'date',
+            'is_demo' => 'boolean',
         ];
     }
 }

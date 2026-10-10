@@ -6,6 +6,10 @@
    radios en 0 y bordes de 2px. Nada flota, nada se decora. */
 
 @layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
     body {
         @apply bg-ground text-ink antialiased;
     }

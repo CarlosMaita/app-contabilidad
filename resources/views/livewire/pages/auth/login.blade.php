@@ -67,4 +67,19 @@ new #[Layout('layouts.guest')] class extends Component
             </a>
         @endif
     </form>
+
+    <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.1em] text-neutral-500">
+        <span class="h-px grow bg-neutral-300"></span>o<span class="h-px grow bg-neutral-300"></span>
+    </div>
+
+    <form method="POST" action="{{ route('demo') }}" x-data="{ loading: false }" x-on:submit="loading = true">
+        @csrf
+        <button type="submit" class="btn-secondary w-full justify-center" x-bind:disabled="loading">
+            <span x-show="! loading">Ver como demo</span>
+            <span x-show="loading" x-cloak>Preparando la demo…</span>
+        </button>
+        <p class="mt-1.5 text-xs text-neutral-600">
+            Entrá sin registrarte a una cuenta de prueba con datos de ejemplo. Se borra al salir.
+        </p>
+    </form>
 </div>
