@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
             DB::transaction(function () use ($user): void {
                 PurgeAccountingData::forUser($user);
                 PurgeOperationsData::forUser($user);
+                $user->tokens()->delete();
             });
         });
     }

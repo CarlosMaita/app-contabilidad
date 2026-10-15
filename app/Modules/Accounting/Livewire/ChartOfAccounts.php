@@ -8,8 +8,8 @@ use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalLine;
 use App\Modules\Accounting\Models\MappingLine;
+use App\Modules\Accounting\Services\AccountManager;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -89,93 +89,19 @@ class ChartOfAccounts extends Component
         $this->showForm = true;
     }
 
-    public function save(): void
+    public function save(AccountManager $accounts): void
     {
-        $validated = $this->validate([
-            'code' => [
-                'required',
-                'string',
-                'max:30',
-                'regex:/^[0-9]+(\.[0-9]+)*$/',
-                Rule::unique('accounts', 'code')
-                    ->where('user_id', auth()->id())
-                    ->ignore($this->editingId),
-            ],
-            'name' => ['required', 'string', 'max:120'],
-            'type' => ['required', Rule::enum(AccountType::class)],
-            'pnl_section' => [
-                'nullable',
-                Rule::in(array_map(fn (PnlSection $s) => $s->value, PnlSection::forType(AccountType::from($this->type)))),
-            ],
-            'cash_flow_section' => [
-                'nullable',
-                Rule::in(array_map(fn (CashFlowSection $s) => $s->value, CashFlowSection::forType(AccountType::from($this->type)))),
-            ],
-            'parent_id' => ['nullable', 'integer'],
-            'is_postable' => ['boolean'],
-            'is_auxiliary' => ['boolean'],
-            'is_active' => ['boolean'],
-        ], [
-            'pnl_section.in' => 'La sección del P&L no corresponde al tipo de cuenta.',
-            'cash_flow_section.in' => 'La actividad del flujo de efectivo no corresponde al tipo de cuenta.',
-        ], [
-            'code' => 'código',
-            'name' => 'nombre',
-            'type' => 'tipo',
-            'pnl_section' => 'sección del P&L',
-            'parent_id' => 'cuenta padre',
-        ]);
-
-        $parent = null;
-        if ($this->parent_id !== null && $this->parent_id !== '') {
-            $parent = Account::findOrFail((int) $this->parent_id);
-
-            if ($this->editingId !== null && $this->isSelfOrDescendant($parent->id, $this->editingId)) {
-                $this->addError('parent_id', 'La cuenta padre no puede ser la misma cuenta ni una de sus sub-cuentas.');
-
-                return;
-            }
-
-            if ($parent->is_auxiliary) {
-                $this->addError('parent_id', 'Una cuenta auxiliar no puede tener sub-cuentas.');
-
-                return;
-            }
-
-            // Una sub-cuenta hereda el tipo y la sección del P&L de su padre.
-            $validated['type'] = $parent->type->value;
-            $validated['pnl_section'] = $parent->effectivePnlSection()?->value;
-            $validated['cash_flow_section'] = $parent->effectiveCashFlowSection()?->value;
-        }
-
-        $validated['parent_id'] = $parent?->id;
-
-        // Un auxiliar solo existe bajo una cuenta principal.
-        if ($parent === null) {
-            $validated['is_auxiliary'] = false;
-        }
-
-        $finalType = AccountType::from($validated['type']);
-        if (! in_array($finalType, [AccountType::Income, AccountType::Expense], true)) {
-            $validated['pnl_section'] = null;
-        } elseif (empty($validated['pnl_section'])) {
-            $validated['pnl_section'] = PnlSection::defaultFor($finalType)?->value;
-        }
-
-        if (CashFlowSection::forType($finalType) === []) {
-            $validated['cash_flow_section'] = null;
-        } elseif (empty($validated['cash_flow_section'])) {
-            $validated['cash_flow_section'] = CashFlowSection::defaultFor($finalType)?->value;
-        }
-
-        if ($this->editingId !== null) {
-            Account::findOrFail($this->editingId)->update($validated);
-        } else {
-            Account::create($validated);
-        }
-
-        // Solo las hojas reciben apuntes: el padre deja de ser imputable.
-        $parent?->update(['is_postable' => false]);
+        $accounts->save([
+            'code' => $this->code,
+            'name' => $this->name,
+            'type' => $this->type,
+            'pnl_section' => $this->pnl_section,
+            'cash_flow_section' => $this->cash_flow_section,
+            'parent_id' => $this->parent_id,
+            'is_postable' => $this->is_postable,
+            'is_auxiliary' => $this->is_auxiliary,
+            'is_active' => $this->is_active,
+        ], $this->editingId);
 
         $this->showForm = false;
         $this->resetForm();
@@ -260,20 +186,6 @@ class ChartOfAccounts extends Component
         $walk(null, 0);
 
         return $rows;
-    }
-
-    protected function isSelfOrDescendant(int $candidateParentId, int $accountId): bool
-    {
-        $current = Account::find($candidateParentId);
-
-        while ($current !== null) {
-            if ($current->id === $accountId) {
-                return true;
-            }
-            $current = $current->parent;
-        }
-
-        return false;
     }
 
     protected function resetForm(): void
