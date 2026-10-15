@@ -1,12 +1,21 @@
 # Servidor MCP
 
-La app expone un servidor [MCP](https://modelcontextprotocol.io) para gestionar la contabilidad de **una cuenta** desde Claude Code o Claude Desktop: consultas, reportes y registro de asientos y operaciones.
+La app expone un servidor [MCP](https://modelcontextprotocol.io) para gestionar la contabilidad de **una cuenta** desde Claude (claude.ai, Claude Desktop o Claude Code): consultas, reportes y registro de asientos y operaciones.
 
 - Endpoint: `https://contable.upsofte.com/mcp` (transporte HTTP «streamable»).
-- Autenticación: token personal (Sanctum) en el header `Authorization: Bearer <token>`. Cada token pertenece a un usuario y solo ve sus datos.
-- Código: `app/Mcp/Servers/ContabilidadServer.php` (instrucciones y lista de tools) y `app/Mcp/Tools/*` (una clase por tool, sobre los servicios de Accounting/Operations). Ruta en `routes/ai.php`.
+- Dos formas de autenticarse, ambas ligadas a un usuario (solo ve sus datos; las cuentas demo quedan rechazadas):
+  - **OAuth** (Laravel Passport) para el conector personalizado de claude.ai: registro dinámico de cliente en `/oauth/register` (solo redirect URIs de claude.ai/claude.com y localhost, ver `config/mcp.php`), autorización en `/oauth/authorize` (vista `resources/views/mcp/authorize.blade.php`) y tokens en `/oauth/token` (acceso 7 días, refresh 180). Metadatos en `/.well-known/oauth-protected-resource/mcp` y `/.well-known/oauth-authorization-server`.
+  - **Token personal** `Authorization: Bearer <id>|<secreto>` para Claude Code / Desktop, generado en el Perfil. Se guarda en la tabla de Sanctum (`App\Mcp\PersonalTokens`, guard `mcp-token`); no se usa el trait de Sanctum en `User` porque choca con el de Passport.
+- Código: `app/Mcp/Servers/ContabilidadServer.php` (instrucciones y lista de tools) y `app/Mcp/Tools/*` (una clase por tool, sobre los servicios de Accounting/Operations). Rutas en `routes/ai.php` (middleware `auth:mcp-token,api`).
+- Producción: Passport necesita sus claves (`php artisan passport:keys`, quedan en `storage/oauth-*.key`, fuera de git) y la extensión `sodium`.
 
 ## Conectar
+
+### claude.ai (web, escritorio, celular)
+
+En Claude: **Configuración → Conectores → Añadir conector personalizado**, pegá `https://contable.upsofte.com/mcp` y conectá. Se abre la app: iniciá sesión y tocá **Autorizar**. La conexión aparece en **Perfil → Acceso MCP → Aplicaciones conectadas**, desde donde se desconecta.
+
+### Claude Code / Claude Desktop con token
 
 1. En la app: **Perfil → Acceso MCP (Claude) → Generar token**. El token se muestra una sola vez junto al comando listo para copiar.
 2. Claude Code:

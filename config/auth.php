@@ -42,6 +42,18 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // MCP: tokens personales del Perfil (Claude Code / Desktop).
+        'mcp-token' => [
+            'driver' => 'mcp-token',
+            'provider' => 'users',
+        ],
+
+        // MCP: tokens OAuth de Passport (conector de claude.ai).
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*

@@ -1,6 +1,7 @@
 <?php
 
 use App\Demo\DemoSandbox;
+use App\Mcp\PersonalTokens;
 use App\Mcp\Servers\ContabilidadServer;
 use App\Mcp\Tools\BalanceGeneral;
 use App\Mcp\Tools\CrearCuenta;
@@ -56,7 +57,7 @@ test('el endpoint exige un token válido', function () {
 
 test('con token lista las tools y responde como el dueño del token', function () {
     $user = mcpUser();
-    $token = $user->createToken('test')->plainTextToken;
+    $token = app(PersonalTokens::class)->create($user, 'test');
 
     mcpCall($token, 'initialize', [
         'protocolVersion' => '2025-06-18',
@@ -78,7 +79,7 @@ test('con token lista las tools y responde como el dueño del token', function (
 test('un token solo ve los datos de su propia cuenta', function () {
     $owner = mcpUser();
     $other = User::factory()->create();
-    $token = $other->createToken('test')->plainTextToken;
+    $token = app(PersonalTokens::class)->create($other, 'test');
 
     $response = mcpCall($token, 'tools/call', ['name' => 'listar_asientos', 'arguments' => (object) []])->assertOk();
 

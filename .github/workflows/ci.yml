@@ -14,7 +14,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mbstring, intl, bcmath, pdo_sqlite, zip, gd
+          extensions: mbstring, intl, bcmath, pdo_sqlite, zip, gd, sodium
           coverage: none
 
       - uses: actions/setup-node@v4
@@ -33,6 +33,7 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          php artisan passport:keys
           touch database/database.sqlite
 
       - name: Lint (Pint)

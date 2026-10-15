@@ -1,5 +1,6 @@
 <?php
 
+use App\Mcp\PersonalTokens;
 use App\Models\User;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Volt\Volt;
@@ -16,12 +17,12 @@ test('el perfil permite generar y revocar tokens MCP', function () {
         ->assertHasNoErrors()
         ->assertSee('claude mcp add --transport http contable');
 
-    expect($user->tokens()->count())->toBe(1)
+    expect($user->mcpTokens()->count())->toBe(1)
         ->and($component->get('plainToken'))->toContain('|');
 
-    $component->call('revoke', $user->tokens()->first()->id);
+    $component->call('revoke', $user->mcpTokens()->first()->id);
 
-    expect($user->tokens()->count())->toBe(0);
+    expect($user->mcpTokens()->count())->toBe(0);
 });
 
 test('una cuenta demo no puede generar tokens', function () {
@@ -33,12 +34,12 @@ test('una cuenta demo no puede generar tokens', function () {
 
     Volt::test('profile.mcp-tokens')->set('name', 'x')->call('createToken')->assertForbidden();
 
-    expect($user->tokens()->count())->toBe(0);
+    expect($user->mcpTokens()->count())->toBe(0);
 });
 
 test('al borrar el usuario se borran sus tokens', function () {
     $user = User::factory()->create();
-    $user->createToken('t');
+    app(PersonalTokens::class)->create($user, 't');
 
     $user->delete();
 
