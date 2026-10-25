@@ -3,6 +3,7 @@
 namespace App\Mcp\Servers;
 
 use App\Mcp\Tools\BalanceGeneral;
+use App\Mcp\Tools\Contabilidades;
 use App\Mcp\Tools\CrearCuenta;
 use App\Mcp\Tools\EjecutarOperacion;
 use App\Mcp\Tools\EstadoDeResultados;
@@ -17,6 +18,8 @@ use App\Mcp\Tools\ResumenCuenta;
 use App\Mcp\Tools\RevertirAsiento;
 use App\Mcp\Tools\SaldosDeCuentas;
 use App\Mcp\Tools\TiposDeOperacion;
+use App\Mcp\Tools\TransferirEntreContabilidades;
+use App\Mcp\Tools\UsarContabilidad;
 use App\Mcp\Tools\VerAsiento;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
@@ -24,9 +27,10 @@ use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
 
 #[Name('Contabilidad por eventos')]
-#[Version('1.0.0')]
+#[Version('1.1.0')]
 #[Instructions(<<<'TXT'
-    Contabilidad de partida doble de UNA cuenta de usuario (la dueña del token). Moneda única.
+    Contabilidad de partida doble del usuario dueño del token. Moneda única.
+    - El usuario puede tener varias contabilidades independientes (la personal y compartidas: familia, negocios con socios). Todas las tools trabajan sobre la contabilidad ACTUAL: consultala con «contabilidades» y cambiala con «usar_contabilidad» antes de registrar. Para mover dinero entre dos contabilidades usá «transferir_entre_contabilidades» (no dos asientos sueltos).
     - Montos: decimales con punto («1500.50»); fechas AAAA-MM-DD. Los saldos vienen según la naturaleza de la cuenta.
     - Cuentas: se identifican por código jerárquico («1.1.02»). Solo las imputables (hojas activas) reciben asientos; las principales con auxiliares se imputan a través de sus auxiliares y consolidan sus saldos.
     - Para registrar hechos con un tipo de operación (ventas, cobros, pagos) usá «ejecutar_operacion»: genera el asiento con el mapeo contable. «registrar_asiento» es para ajustes y asientos manuales.
@@ -56,5 +60,8 @@ class ContabilidadServer extends Server
         EjecutarOperacion::class,
         RevertirAsiento::class,
         CrearCuenta::class,
+        Contabilidades::class,
+        UsarContabilidad::class,
+        TransferirEntreContabilidades::class,
     ];
 }

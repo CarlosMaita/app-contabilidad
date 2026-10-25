@@ -4,6 +4,7 @@ use App\Demo\DemoSandbox;
 use App\Models\User;
 use App\Modules\Accounting\Livewire\Dashboard;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Accounting\Models\BookTransfer;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\ReportService;
 use App\Modules\Operations\Enums\ExecutionStatus;
@@ -106,4 +107,22 @@ test('el seeder crea el usuario demo fijo', function () {
 
     expect($user->is_demo)->toBeFalse()
         ->and(JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count())->toBeGreaterThan(20);
+});
+
+test('la demo trae una contabilidad familiar con aportes y gastos comunes', function () {
+    $this->post('/demo');
+    $user = auth()->user();
+
+    $family = $user->books()->where('kind', 'shared')->sole();
+    $reports = app(ReportService::class);
+    $balance = $reports->balanceSheet($family->id, now()->toDateString());
+
+    expect($family->name)->toBe('Familia (demo)')
+        ->and(BookTransfer::where('to_book_id', $family->id)->count())->toBe(2)
+        ->and(JournalEntry::withoutGlobalScopes()->where('book_id', $family->id)->count())->toBe(9)
+        ->and($balance['check']['balanced'])->toBeTrue()
+        ->and($balance['sections']['asset']['total'])->toBe('246800.00'); // 750.000 aportados − 503.200 de gastos
+
+    $this->post(route('books.switch', $family));
+    $this->get(route('dashboard'))->assertOk()->assertSee('Familia (demo)')->assertSee('Aportar desde mi contabilidad');
 });

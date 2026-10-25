@@ -2,6 +2,7 @@
 
 namespace App\Modules\Accounting\Livewire;
 
+use App\Modules\Accounting\Models\BookTransfer;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\ReverseJournalEntry;
 use App\Modules\Shared\Books\CurrentBook;
@@ -60,6 +61,24 @@ class JournalBook extends Component
         }
     }
 
+    /**
+     * Asientos que son parte de una transferencia => contabilidad del otro lado.
+     *
+     * @param  array<int, int>  $ids
+     * @return array<int, string>
+     */
+    private function transfersFor(array $ids): array
+    {
+        $other = [];
+
+        foreach (BookTransfer::with(['fromBook', 'toBook'])->whereIn('from_entry_id', $ids)->orWhereIn('to_entry_id', $ids)->get() as $t) {
+            $other[$t->from_entry_id] = $t->toBook->label();
+            $other[$t->to_entry_id] = $t->fromBook->label();
+        }
+
+        return $other;
+    }
+
     public function render()
     {
         $entries = JournalEntry::with(['lines.account', 'execution.operationType', 'reverses', 'author'])
@@ -71,6 +90,7 @@ class JournalBook extends Component
         return view('accounting::livewire.journal-book', [
             'entries' => $entries,
             'shared' => ! CurrentBook::get()->isPersonal(),
+            'transfers' => $this->transfersFor($entries->getCollection()->pluck('id')->all()),
         ]);
     }
 }

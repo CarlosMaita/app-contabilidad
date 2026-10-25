@@ -1,9 +1,11 @@
 <?php
 
+use App\Books\BookService;
 use App\Demo\DemoSandbox;
 use App\Mcp\PersonalTokens;
 use App\Mcp\Servers\ContabilidadServer;
 use App\Mcp\Tools\BalanceGeneral;
+use App\Mcp\Tools\Contabilidades;
 use App\Mcp\Tools\CrearCuenta;
 use App\Mcp\Tools\EjecutarOperacion;
 use App\Mcp\Tools\EstadoDeResultados;
@@ -18,6 +20,8 @@ use App\Mcp\Tools\ResumenCuenta;
 use App\Mcp\Tools\RevertirAsiento;
 use App\Mcp\Tools\SaldosDeCuentas;
 use App\Mcp\Tools\TiposDeOperacion;
+use App\Mcp\Tools\TransferirEntreContabilidades;
+use App\Mcp\Tools\UsarContabilidad;
 use App\Mcp\Tools\VerAsiento;
 use App\Models\User;
 use App\Modules\Accounting\Enums\JournalEntryStatus;
@@ -66,7 +70,7 @@ test('con token lista las tools y responde como el dueño del token', function (
     ])->assertOk()->assertJsonPath('result.serverInfo.name', 'Contabilidad por eventos');
 
     $tools = collect(mcpCall($token, 'tools/list', [], 2)->assertOk()->json('result.tools'))->pluck('name');
-    expect($tools)->toHaveCount(16)
+    expect($tools)->toHaveCount(19)
         ->toContain('resumen_cuenta', 'registrar_asiento', 'ejecutar_operacion', 'revertir_asiento', 'crear_cuenta');
 
     mcpCall($token, 'tools/call', ['name' => 'resumen_cuenta', 'arguments' => (object) []], 3)
@@ -218,4 +222,26 @@ test('crear_cuenta respeta las reglas del plan de cuentas', function () {
         ->assertHasErrors();
     $as->tool(CrearCuenta::class, ['codigo' => '7', 'nombre' => 'Sin tipo'])
         ->assertHasErrors(['Indicá el tipo']);
+});
+
+test('el MCP lista contabilidades, cambia la actual y transfiere entre ellas', function () {
+    $user = mcpUser();
+    $family = app(BookService::class)->create($user, 'Familia Maita', 'household');
+    $as = ContabilidadServer::actingAs($user);
+
+    $as->tool(Contabilidades::class)->assertOk()->assertSee('Familia Maita')->assertSee('"actual":true');
+
+    $as->tool(TransferirEntreContabilidades::class, [
+        'desde' => 'personal', 'cuenta_salida' => '1.1.02',
+        'hacia' => 'Familia Maita', 'cuenta_entrada' => '1.1.01',
+        'monto' => 300, 'fecha' => now()->toDateString(), 'descripcion' => 'Aporte por MCP',
+    ])->assertOk()->assertHasNoErrors()->assertSee('Transferencia registrada');
+
+    $as->tool(UsarContabilidad::class, ['contabilidad' => 'Familia Maita'])->assertOk()->assertSee('Familia Maita');
+    expect($user->fresh()->current_book_id)->toBe($family->id);
+
+    // Ahora las consultas son de la familiar: el aporte figura en Binance familiar.
+    $as->tool(LibroMayor::class, ['cuenta' => '1.1.01'])->assertOk()->assertSee('Aporte por MCP')->assertSee('"saldo_final":"300.00"');
+
+    $as->tool(UsarContabilidad::class, ['contabilidad' => 'Ajena'])->assertHasErrors(['No sos miembro']);
 });

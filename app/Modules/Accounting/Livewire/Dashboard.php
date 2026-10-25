@@ -30,6 +30,8 @@ class Dashboard extends Component
         ])->count();
 
         return view('accounting::livewire.dashboard', [
+            'book' => $book = CurrentBook::get(),
+            'others' => $book->members()->count() - 1,
             'assets' => $balance['sections']['asset']['total'],
             'balanced' => $balance['check']['balanced'],
             'liabilitiesEquity' => $balance['check']['liabilities_equity'],

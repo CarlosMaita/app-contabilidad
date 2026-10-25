@@ -10,7 +10,6 @@ use App\Modules\Accounting\Services\PurgeAccountingData;
 use App\Modules\Operations\Services\PurgeOperationsData;
 use App\Modules\Shared\Books\Book;
 use App\Modules\Shared\Books\BookInvitation;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -200,7 +199,7 @@ class BookService
             $next++;
         }
 
-        $account = $this->asBook($book, $user, fn () => app(AccountManager::class)->save([
+        $account = InBook::run($book, $user, fn () => app(AccountManager::class)->save([
             'code' => sprintf('%s.%02d', $parentCode, $next),
             'name' => "Aportes de {$user->name}",
             'type' => $parent->type->value,
@@ -235,28 +234,6 @@ class BookService
     {
         if ($member->current_book_id === $book->id) {
             $member->forceFill(['current_book_id' => $member->personalBook()->id])->save();
-        }
-    }
-
-    /**
-     * Ejecuta como si el usuario trabajara en esa contabilidad (los servicios
-     * usan la contabilidad actual del usuario autenticado).
-     *
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
-     */
-    private function asBook(Book $book, User $user, callable $callback): mixed
-    {
-        $previousUser = Auth::user();
-        $proxy = (clone $user)->forceFill(['current_book_id' => $book->id]);
-        Auth::setUser($proxy);
-
-        try {
-            return $callback();
-        } finally {
-            $previousUser !== null ? Auth::setUser($previousUser) : Auth::forgetUser();
         }
     }
 }

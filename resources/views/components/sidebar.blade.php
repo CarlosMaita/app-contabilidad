@@ -15,6 +15,7 @@
             ['label' => 'Libro diario', 'route' => 'journal.index', 'active' => 'journal.*'],
             ['label' => 'Libro mayor', 'route' => 'ledger.index', 'active' => 'ledger.*'],
             ['label' => 'Libros auxiliares', 'route' => 'subledgers.index', 'active' => 'subledgers.*'],
+            ['label' => 'Transferir entre contabilidades', 'route' => 'transfers.create', 'active' => 'transfers.*'],
             ['label' => 'Reportes', 'route' => 'reports.index', 'active' => 'reports.*'],
         ],
     ];

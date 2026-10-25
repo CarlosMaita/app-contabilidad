@@ -6,6 +6,17 @@
             <div class="note-accent text-sm">{{ session('status') }}</div>
         @endif
 
+        @unless ($book->isPersonal())
+            <div class="flex flex-wrap items-center gap-3 border-2 border-ink bg-white px-4 py-3 text-sm">
+                <span class="min-w-0 grow">
+                    <span class="font-extrabold">{{ $book->label() }}</span>
+                    <span class="text-neutral-700">· {{ $others === 0 ? 'contabilidad compartida, todavía sin otros miembros' : 'compartida con '.$others.' '.($others === 1 ? 'persona' : 'personas') }}</span>
+                </span>
+                <a href="{{ route('transfers.create', ['to' => $book->id]) }}" wire:navigate class="btn-primary px-3 py-2 text-xs">Aportar desde mi contabilidad</a>
+                <a href="{{ route('books.index') }}" wire:navigate class="btn-secondary px-3 py-2 text-xs">Miembros</a>
+            </div>
+        @endunless
+
         <div class="grid grid-cols-2 border-2 border-ink lg:grid-cols-4">
             <div class="border-b border-r border-neutral-300 bg-white p-3 sm:p-4 lg:border-b-0">
                 <div class="kicker">Activo total</div>

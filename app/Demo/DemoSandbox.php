@@ -18,6 +18,7 @@ class DemoSandbox
 
     public function __construct(
         private readonly DemoData $data,
+        private readonly DemoFamily $family,
     ) {}
 
     public function create(?string $email = null, ?string $password = null): User
@@ -32,6 +33,7 @@ class DemoSandbox
 
             DefaultChartOfAccounts::seedFor($user->personalBook());
             $this->data->populate($user);
+            $this->family->populate($user);
 
             return $user;
         });

@@ -54,7 +54,11 @@
                                 @endif
                             </td>
                             <td class="td text-xs text-neutral-700">
-                                {{ $entry->execution?->operationType?->name ?? 'Manual' }}
+                                @if (isset($transfers[$entry->id]))
+                                    <span class="font-extrabold text-ink">Transferencia ↔ {{ $transfers[$entry->id] }}</span>
+                                @else
+                                    {{ $entry->execution?->operationType?->name ?? 'Manual' }}
+                                @endif
                                 @if ($shared && $entry->author)
                                     <span class="block text-[11px] text-neutral-500">por {{ $entry->author->name }}</span>
                                 @endif

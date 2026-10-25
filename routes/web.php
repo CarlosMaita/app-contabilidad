@@ -3,6 +3,7 @@
 use App\Http\Controllers\DemoController;
 use App\Livewire\Actions\Logout;
 use App\Livewire\Books\ManageBooks;
+use App\Livewire\Books\TransferBetweenBooks;
 use App\Modules\Accounting\Livewire\Dashboard;
 use App\Modules\Shared\Books\Book;
 use App\Modules\Shared\Books\CurrentBook;
@@ -21,6 +22,7 @@ Route::view('profile', 'profile')
 // Contabilidades: gestión y cambio de la contabilidad actual.
 Route::middleware('auth')->group(function (): void {
     Route::get('books', ManageBooks::class)->name('books.index');
+    Route::get('transfers', TransferBetweenBooks::class)->name('transfers.create');
 
     Route::post('books/{book}/switch', function (Book $book) {
         CurrentBook::switchTo(auth()->user(), $book);

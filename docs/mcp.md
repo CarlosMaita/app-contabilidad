@@ -55,6 +55,11 @@ Para cortar el acceso, revocá el token en el Perfil. Las cuentas demo no pueden
 | `ejecutar_operacion` | Ejecuta un tipo de operación; el mapeo genera el asiento |
 | `revertir_asiento` | Contra-asiento; si viene de una operación, la anula |
 | `crear_cuenta` | Alta en el plan de cuentas (incluye auxiliares) |
+| `contabilidades` | Contabilidades del usuario (personal y compartidas), rol, miembros y cuál es la actual |
+| `usar_contabilidad` | Cambia la contabilidad actual (por id o nombre); también se refleja en la web |
+| `transferir_entre_contabilidades` | Mueve dinero entre dos contabilidades (ej. aporte de la personal al fondo familiar): un asiento en cada una, enlazados |
+
+Todas las tools trabajan sobre la **contabilidad actual** del usuario. Para registrar en la familiar o en la de un negocio compartido, primero `usar_contabilidad`.
 
 Los errores de negocio (asiento desbalanceado, período cerrado, cuenta no imputable, etc.) vuelven como error de la tool con el mensaje en español; no se registra nada.
 
