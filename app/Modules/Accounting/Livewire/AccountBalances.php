@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Services\ReportService;
+use App\Modules\Shared\Books\CurrentBook;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -27,7 +28,7 @@ class AccountBalances extends Component
     {
         return view('accounting::livewire.account-balances', [
             'report' => $reports->accountBalances(
-                auth()->id(),
+                CurrentBook::id(),
                 $this->asOf !== '' ? $this->asOf : now()->toDateString(),
                 $this->search,
             ),

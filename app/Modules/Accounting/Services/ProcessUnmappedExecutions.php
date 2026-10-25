@@ -18,13 +18,13 @@ class ProcessUnmappedExecutions
     /**
      * @return array{posted: int, failed: int}
      */
-    public function process(int $userId, int $operationTypeId): array
+    public function process(int $bookId, int $operationTypeId): array
     {
         $posted = 0;
         $failed = 0;
 
         OperationExecution::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->where('operation_type_id', $operationTypeId)
             ->whereIn('status', [ExecutionStatus::Pending, ExecutionStatus::Unmapped, ExecutionStatus::Failed])
             ->orderBy('executed_at')

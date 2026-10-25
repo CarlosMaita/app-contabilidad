@@ -3,6 +3,7 @@
 namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Services\ReportService;
+use App\Modules\Shared\Books\CurrentBook;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -35,14 +36,14 @@ class Reports extends Component
         $this->asOf = $this->asOf !== '' ? $this->asOf : now()->toDateString();
         $this->from = $this->from !== '' ? $this->from : now()->startOfYear()->toDateString();
         $this->to = $this->to !== '' ? $this->to : now()->toDateString();
-        $this->closedUntil = auth()->user()->accounting_closed_until?->toDateString() ?? '';
+        $this->closedUntil = CurrentBook::get()->accounting_closed_until?->toDateString() ?? '';
     }
 
     public function saveClosedUntil(): void
     {
         $this->validate(['closedUntil' => ['nullable', 'date']]);
 
-        auth()->user()->update([
+        CurrentBook::get()->update([
             'accounting_closed_until' => $this->closedUntil !== '' ? $this->closedUntil : null,
         ]);
 
@@ -58,17 +59,17 @@ class Reports extends Component
 
     public function render(ReportService $reports)
     {
-        $userId = auth()->id();
+        $bookId = CurrentBook::id();
 
         return view('accounting::livewire.reports', [
             'balance' => $this->tab === 'balance'
-                ? $reports->balanceSheet($userId, $this->asOf, $this->showZero)
+                ? $reports->balanceSheet($bookId, $this->asOf, $this->showZero)
                 : null,
             'pnl' => $this->tab === 'pnl'
-                ? $reports->profitAndLoss($userId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
+                ? $reports->profitAndLoss($bookId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
                 : null,
             'cashflow' => $this->tab === 'cashflow'
-                ? $reports->cashFlow($userId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
+                ? $reports->cashFlow($bookId, $this->from !== '' ? $this->from : null, $this->to, $this->showZero)
                 : null,
         ]);
     }

@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use App\Modules\Operations\Enums\ExecutionStatus;
 use App\Modules\Operations\Models\OperationExecution;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +18,7 @@ class OperationExecutionFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'book_id' => Book::factory(),
             'operation_type_id' => OperationType::factory(),
             'payload' => ['monto' => '100.00'],
             'executed_at' => now()->toDateString(),

@@ -36,7 +36,7 @@ test('se puede crear un tipo de operación con variables', function () {
     $type = OperationType::where('code', 'pago_a_proveedor')->first();
 
     expect($type)->not->toBeNull()
-        ->and($type->user_id)->toBe($user->id)
+        ->and($type->book_id)->toBe(bookOf($user)->id)
         ->and($type->variables)->toHaveCount(2)
         ->and($type->variables->pluck('name')->all())->toBe(['monto', 'proveedor']);
 });
@@ -66,7 +66,7 @@ test('los nombres de variables deben ser snake_case y únicos', function () {
 
 test('el código es único por usuario', function () {
     $user = User::factory()->create();
-    OperationType::factory()->for($user)->create(['code' => 'pago']);
+    OperationType::factory()->for(bookOf($user))->create(['code' => 'pago']);
     $this->actingAs($user);
 
     Livewire::test(OperationTypes::class)
@@ -79,8 +79,8 @@ test('el código es único por usuario', function () {
 
 test('no se puede eliminar un tipo con ejecuciones', function () {
     $user = User::factory()->create();
-    $type = OperationType::factory()->for($user)->create();
-    OperationExecution::factory()->for($user)->create(['operation_type_id' => $type->id]);
+    $type = OperationType::factory()->for(bookOf($user))->create();
+    OperationExecution::factory()->for(bookOf($user))->create(['operation_type_id' => $type->id]);
     $this->actingAs($user);
 
     Livewire::test(OperationTypes::class)->call('delete', $type->id);
@@ -90,7 +90,7 @@ test('no se puede eliminar un tipo con ejecuciones', function () {
 
 test('un usuario no puede editar tipos de operación de otro usuario', function () {
     $other = User::factory()->create();
-    $foreignType = OperationType::factory()->for($other)->create();
+    $foreignType = OperationType::factory()->for(bookOf($other))->create();
 
     $this->actingAs(User::factory()->create());
 

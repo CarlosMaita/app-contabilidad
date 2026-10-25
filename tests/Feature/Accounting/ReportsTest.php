@@ -19,7 +19,7 @@ use Livewire\Livewire;
  */
 function setupReports(User $user): array
 {
-    $mk = fn (string $code, string $name, string $type, ?Account $parent = null, bool $postable = true): Account => Account::factory()->for($user)->create([
+    $mk = fn (string $code, string $name, string $type, ?Account $parent = null, bool $postable = true): Account => Account::factory()->for(bookOf($user))->create([
         'code' => $code, 'name' => $name, 'type' => $type,
         'parent_id' => $parent?->id, 'is_postable' => $postable,
     ]);
@@ -36,7 +36,7 @@ function setupReports(User $user): array
     $sueldos = $mk('5.1', 'Sueldos', 'expense', $gastos);
 
     $post = fn (string $date, string $desc, Account $debit, Account $credit, string $amount) => app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: $date, description: $desc,
+        bookId: bookOf($user)->id, date: $date, description: $desc,
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $debit->id, 'amount' => $amount, 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $credit->id, 'amount' => $amount, 'memo' => null],
@@ -55,7 +55,7 @@ test('el balance general cuadra: Activo = Pasivo + Patrimonio + Resultado', func
     $user = User::factory()->create();
     setupReports($user);
 
-    $report = app(ReportService::class)->balanceSheet($user->id, '2026-02-28');
+    $report = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-02-28');
 
     expect($report['sections']['asset']['total'])->toBe('1300.00')
         ->and($report['sections']['liability']['total'])->toBe('0.00')
@@ -69,7 +69,7 @@ test('el balance agrupa jerárquicamente: el padre acumula a sus hijas', functio
     $user = User::factory()->create();
     setupReports($user);
 
-    $report = app(ReportService::class)->balanceSheet($user->id, '2026-02-28');
+    $report = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-02-28');
     $rows = $report['sections']['asset']['rows'];
 
     expect($rows)->toHaveCount(2)
@@ -88,8 +88,8 @@ test('el balance a una fecha excluye movimientos posteriores', function () {
     $user = User::factory()->create();
     setupReports($user);
 
-    $febrero = app(ReportService::class)->balanceSheet($user->id, '2026-02-28');
-    $marzo = app(ReportService::class)->balanceSheet($user->id, '2026-03-31');
+    $febrero = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-02-28');
+    $marzo = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-03-31');
 
     expect($febrero['sections']['asset']['total'])->toBe('1300.00')
         ->and($marzo['sections']['asset']['total'])->toBe('2299.00')
@@ -101,14 +101,14 @@ test('el estado de resultados calcula ingresos, gastos y resultado neto por rang
     setupReports($user);
 
     // Cuentas sin sección asignada caen en operativo (fallback legado).
-    $pnl = app(ReportService::class)->profitAndLoss($user->id, '2026-02-01', '2026-02-28');
+    $pnl = app(ReportService::class)->profitAndLoss(bookOf($user)->id, '2026-02-01', '2026-02-28');
 
     expect($pnl['sections']['operating_income']['total'])->toBe('500.00')
         ->and($pnl['sections']['operating_expense']['total'])->toBe('200.00')
         ->and($pnl['lines']['net'])->toBe('300.00')
         ->and($pnl['margins']['net'])->toBe('60.0');
 
-    $anual = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31');
+    $anual = app(ReportService::class)->profitAndLoss(bookOf($user)->id, null, '2026-12-31');
     expect($anual['total_income'])->toBe('1499.00')
         ->and($anual['lines']['net'])->toBe('1299.00');
 });
@@ -116,11 +116,11 @@ test('el estado de resultados calcula ingresos, gastos y resultado neto por rang
 test('la cascada del P&L discrimina bruta, EBITDA, EBIT, financiero, impuestos y neto', function () {
     $user = User::factory()->create();
 
-    $mk = fn (string $code, string $name, string $type, string $section): Account => Account::factory()->for($user)->create([
+    $mk = fn (string $code, string $name, string $type, string $section): Account => Account::factory()->for(bookOf($user))->create([
         'code' => $code, 'name' => $name, 'type' => $type, 'pnl_section' => $section,
     ]);
 
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
     $ventas = $mk('4.1', 'Ventas', 'income', 'operating_income');
     $intGanados = $mk('4.2', 'Intereses ganados', 'income', 'financial_income');
     $otrosIng = $mk('4.3', 'Otros ingresos', 'income', 'other_income');
@@ -131,7 +131,7 @@ test('la cascada del P&L discrimina bruta, EBITDA, EBIT, financiero, impuestos y
     $impuesto = $mk('6.4', 'Impuesto a las ganancias', 'expense', 'tax');
 
     $post = fn (Account $debit, Account $credit, string $amount) => app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-03-10', description: 'mov',
+        bookId: bookOf($user)->id, date: '2026-03-10', description: 'mov',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $debit->id, 'amount' => $amount, 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $credit->id, 'amount' => $amount, 'memo' => null],
@@ -147,7 +147,7 @@ test('la cascada del P&L discrimina bruta, EBITDA, EBIT, financiero, impuestos y
     $post($caja, $otrosIng, '30.00');      // otros ingresos
     $post($impuesto, $caja, '90.00');      // impuesto
 
-    $pnl = app(ReportService::class)->profitAndLoss($user->id, '2026-03-01', '2026-03-31');
+    $pnl = app(ReportService::class)->profitAndLoss(bookOf($user)->id, '2026-03-01', '2026-03-31');
 
     expect($pnl['lines']['gross'])->toBe('600.00')       // 1000 − 400
         ->and($pnl['lines']['ebitda'])->toBe('450.00')   // − 150
@@ -168,22 +168,22 @@ test('la cascada del P&L discrimina bruta, EBITDA, EBIT, financiero, impuestos y
 test('el P&L oculta cuentas en cero salvo que se pidan explícitamente', function () {
     $user = User::factory()->create();
 
-    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income', 'pnl_section' => 'operating_income']);
-    Account::factory()->for($user)->create(['code' => '6.2', 'name' => 'Depreciación sin uso', 'type' => 'expense', 'pnl_section' => 'depreciation']);
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $ventas = Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income', 'pnl_section' => 'operating_income']);
+    Account::factory()->for(bookOf($user))->create(['code' => '6.2', 'name' => 'Depreciación sin uso', 'type' => 'expense', 'pnl_section' => 'depreciation']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
 
     app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-03-10', description: 'venta',
+        bookId: bookOf($user)->id, date: '2026-03-10', description: 'venta',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $caja->id, 'amount' => '100.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $ventas->id, 'amount' => '100.00', 'memo' => null],
         ],
     );
 
-    $oculto = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31');
+    $oculto = app(ReportService::class)->profitAndLoss(bookOf($user)->id, null, '2026-12-31');
     expect($oculto['sections']['depreciation']['rows'])->toBeEmpty();
 
-    $visible = app(ReportService::class)->profitAndLoss($user->id, null, '2026-12-31', includeZero: true);
+    $visible = app(ReportService::class)->profitAndLoss(bookOf($user)->id, null, '2026-12-31', includeZero: true);
     expect($visible['sections']['depreciation']['rows'])->toHaveCount(1)
         ->and($visible['sections']['depreciation']['rows'][0]['amount'])->toBe('0.00');
 });
@@ -193,7 +193,7 @@ test('los reportes no incluyen datos de otros usuarios', function () {
     setupReports($other);
 
     $user = User::factory()->create();
-    $report = app(ReportService::class)->balanceSheet($user->id, '2026-12-31');
+    $report = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-12-31');
 
     expect($report['sections']['asset']['total'])->toBe('0.00')
         ->and($report['check']['balanced'])->toBeTrue();

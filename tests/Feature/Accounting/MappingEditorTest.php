@@ -16,10 +16,10 @@ use Livewire\Livewire;
  */
 function setupEditor(User $user): array
 {
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
-    $gasto = Account::factory()->for($user)->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $gasto = Account::factory()->for(bookOf($user))->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']);
 
-    $type = OperationType::factory()->for($user)->create(['name' => 'Pago', 'code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['name' => 'Pago', 'code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal']);
 
     return ['type' => $type, 'caja' => $caja, 'gasto' => $gasto];
@@ -139,7 +139,7 @@ test('el editor no permite cuentas de otro usuario', function () {
     $user = User::factory()->create();
     $other = User::factory()->create();
     $s = setupEditor($user);
-    $foreign = Account::factory()->for($other)->create(['code' => '9.9']);
+    $foreign = Account::factory()->for(bookOf($other))->create(['code' => '9.9']);
     $this->actingAs($user);
 
     $lines = editorLines($s);

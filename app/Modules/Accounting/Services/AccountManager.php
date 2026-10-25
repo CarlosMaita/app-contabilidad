@@ -6,7 +6,7 @@ use App\Modules\Accounting\Enums\AccountType;
 use App\Modules\Accounting\Enums\CashFlowSection;
 use App\Modules\Accounting\Enums\PnlSection;
 use App\Modules\Accounting\Models\Account;
-use Illuminate\Support\Facades\Auth;
+use App\Modules\Shared\Books\CurrentBook;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -47,7 +47,7 @@ class AccountManager
                 'max:30',
                 'regex:/^[0-9]+(\.[0-9]+)*$/',
                 Rule::unique('accounts', 'code')
-                    ->where('user_id', Auth::id())
+                    ->where('book_id', CurrentBook::id())
                     ->ignore($editingId),
             ],
             'name' => ['required', 'string', 'max:120'],

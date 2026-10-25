@@ -2,8 +2,8 @@
 
 namespace App\Modules\Accounting\Services;
 
-use App\Models\User;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -84,15 +84,26 @@ class DefaultChartOfAccounts
         ['6.5.01', 'Otros egresos no operativos', 'expense', '6.5', 'other_expense'],
     ];
 
-    public static function seedFor(User $user): void
+    public static function seedFor(Book $book): void
     {
-        DB::transaction(function () use ($user): void {
-            $parentCodes = array_filter(array_column(self::ACCOUNTS, 3));
+        self::seedPlan($book, self::ACCOUNTS);
+    }
+
+    /**
+     * Crea un plan completo en una contabilidad vacía. Cada fila:
+     * [código, nombre, tipo, código padre, sección P&L o flujo de efectivo].
+     *
+     * @param  array<int, array{0: string, 1: string, 2: string, 3: ?string, 4: ?string}>  $accounts
+     */
+    public static function seedPlan(Book $book, array $accounts): void
+    {
+        DB::transaction(function () use ($book, $accounts): void {
+            $parentCodes = array_filter(array_column($accounts, 3));
             $created = [];
 
-            foreach (self::ACCOUNTS as [$code, $name, $type, $parentCode, $section]) {
+            foreach ($accounts as [$code, $name, $type, $parentCode, $section]) {
                 $created[$code] = Account::withoutGlobalScopes()->create([
-                    'user_id' => $user->id,
+                    'book_id' => $book->id,
                     'code' => $code,
                     'name' => $name,
                     'type' => $type,
@@ -107,16 +118,16 @@ class DefaultChartOfAccounts
 
     /**
      * Asigna la actividad del flujo de efectivo a las cuentas de balance
-     * de un usuario existente que coinciden con el plan base (mismo código,
+     * de una contabilidad existente que coinciden con el plan base (mismo código,
      * nombre y tipo) y todavía no la tienen. No pisa clasificaciones hechas
      * a mano ni toca cuentas con otra semántica.
      *
      * @return int cantidad de cuentas clasificadas
      */
-    public static function classifyFor(User $user): int
+    public static function classifyFor(Book $book): int
     {
         $existing = Account::withoutGlobalScopes()
-            ->where('user_id', $user->id)
+            ->where('book_id', $book->id)
             ->whereNull('cash_flow_section')
             ->get()
             ->keyBy('code');
@@ -153,7 +164,7 @@ class DefaultChartOfAccounts
     }
 
     /**
-     * Completa el plan de un usuario existente con las cuentas del plan
+     * Completa el plan de una contabilidad existente con las cuentas del plan
      * base que le falten. Idempotente y conservador:
      *
      * - Una cuenta existente con el mismo código y nombre se reutiliza
@@ -164,12 +175,12 @@ class DefaultChartOfAccounts
      *
      * @return int cantidad de cuentas agregadas
      */
-    public static function syncFor(User $user): int
+    public static function syncFor(Book $book): int
     {
-        return DB::transaction(function () use ($user): int {
+        return DB::transaction(function () use ($book): int {
             $parentCodes = array_filter(array_column(self::ACCOUNTS, 3));
             $existing = Account::withoutGlobalScopes()
-                ->where('user_id', $user->id)
+                ->where('book_id', $book->id)
                 ->get()
                 ->keyBy('code');
 
@@ -201,7 +212,7 @@ class DefaultChartOfAccounts
                 $parent = $parentCode !== null ? $resolved[$parentCode] : null;
 
                 $resolved[$code] = Account::withoutGlobalScopes()->create([
-                    'user_id' => $user->id,
+                    'book_id' => $book->id,
                     'code' => $code,
                     'name' => $name,
                     'type' => $type,

@@ -14,7 +14,7 @@ use App\Modules\Operations\Models\OperationExecution;
 /**
  * Convierte una ejecución de operación en un asiento del diario.
  * Corre sin usuario autenticado (listener en cola), por eso trabaja
- * siempre sin global scopes y con el user_id de la ejecución.
+ * siempre sin global scopes y con el book_id de la ejecución.
  */
 class PostExecutionToJournal
 {
@@ -43,7 +43,7 @@ class PostExecutionToJournal
         }
 
         $mapping = AccountingMapping::withoutGlobalScopes()
-            ->where('user_id', $execution->user_id)
+            ->where('book_id', $execution->book_id)
             ->where('operation_type_id', $execution->operation_type_id)
             ->where('is_active', true)
             ->orderByDesc('version')
@@ -60,7 +60,7 @@ class PostExecutionToJournal
             $resolved = $this->resolver->resolve($mapping, $execution);
 
             $entry = $this->builder->post(
-                userId: $execution->user_id,
+                bookId: $execution->book_id,
                 date: $execution->executed_at,
                 description: $resolved['description'],
                 lines: $resolved['lines'],

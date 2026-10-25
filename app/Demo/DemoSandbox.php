@@ -30,7 +30,7 @@ class DemoSandbox
             ]);
             $user->forceFill(['is_demo' => true, 'email_verified_at' => now()])->save();
 
-            DefaultChartOfAccounts::seedFor($user);
+            DefaultChartOfAccounts::seedFor($user->personalBook());
             $this->data->populate($user);
 
             return $user;

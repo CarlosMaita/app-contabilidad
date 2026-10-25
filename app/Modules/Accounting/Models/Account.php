@@ -5,7 +5,7 @@ namespace App\Modules\Accounting\Models;
 use App\Modules\Accounting\Enums\AccountType;
 use App\Modules\Accounting\Enums\CashFlowSection;
 use App\Modules\Accounting\Enums\PnlSection;
-use App\Modules\Shared\Traits\BelongsToUser;
+use App\Modules\Shared\Traits\BelongsToBook;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,11 +16,11 @@ use Illuminate\Support\Collection;
 
 class Account extends Model
 {
-    use BelongsToUser;
+    use BelongsToBook;
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'book_id',
         'code',
         'name',
         'type',

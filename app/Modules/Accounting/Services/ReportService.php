@@ -52,14 +52,14 @@ class ReportService
      *   check: array{assets: string, liabilities_equity: string, balanced: bool}
      * }
      */
-    public function balanceSheet(int $userId, string $asOf, bool $includeZero = false): array
+    public function balanceSheet(int $bookId, string $asOf, bool $includeZero = false): array
     {
-        $balances = $this->balancesByAccount($userId, null, $asOf);
+        $balances = $this->balancesByAccount($bookId, null, $asOf);
 
         $sections = [];
         foreach ([AccountType::Asset, AccountType::Liability, AccountType::Equity] as $type) {
             $sections[$type->value] = $this->buildSection(
-                $this->accountsOfType($userId, $type),
+                $this->accountsOfType($bookId, $type),
                 $balances,
                 $includeZero,
                 $type->label(),
@@ -67,8 +67,8 @@ class ReportService
         }
 
         // Resultado acumulado (ingresos - gastos) hasta la fecha, como línea del patrimonio.
-        $income = $this->buildSection($this->accountsOfType($userId, AccountType::Income), $balances, false, '')['total'];
-        $expense = $this->buildSection($this->accountsOfType($userId, AccountType::Expense), $balances, false, '')['total'];
+        $income = $this->buildSection($this->accountsOfType($bookId, AccountType::Income), $balances, false, '')['total'];
+        $expense = $this->buildSection($this->accountsOfType($bookId, AccountType::Expense), $balances, false, '')['total'];
         $result = bcsub($income, $expense, 2);
 
         $liabilitiesEquity = Money::add(
@@ -104,12 +104,12 @@ class ReportService
      *   total_expense: string
      * }
      */
-    public function profitAndLoss(int $userId, ?string $from, string $to, bool $includeZero = false): array
+    public function profitAndLoss(int $bookId, ?string $from, string $to, bool $includeZero = false): array
     {
-        $balances = $this->balancesByAccount($userId, $from, $to);
+        $balances = $this->balancesByAccount($bookId, $from, $to);
 
         $bySection = Account::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->whereIn('type', [AccountType::Income, AccountType::Expense])
             ->orderBy('code')
             ->get()
@@ -191,17 +191,17 @@ class ReportService
      *   check: array{actual_change: string, balanced: bool}
      * }
      */
-    public function cashFlow(int $userId, ?string $from, string $to, bool $includeZero = false): array
+    public function cashFlow(int $bookId, ?string $from, string $to, bool $includeZero = false): array
     {
         $accounts = Account::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->whereIn('type', [AccountType::Asset, AccountType::Liability, AccountType::Equity])
             ->orderBy('code')
             ->get();
         $byId = $accounts->keyBy('id');
         $sectionOf = $accounts->mapWithKeys(fn (Account $a): array => [$a->id => $a->effectiveCashFlowSection($byId)]);
 
-        $period = $this->balancesByAccount($userId, $from, $to);
+        $period = $this->balancesByAccount($bookId, $from, $to);
         $impact = fn (int $id): string => isset($period[$id])
             ? bcsub($period[$id]['credit'], $period[$id]['debit'], 2)
             : '0.00';
@@ -243,7 +243,7 @@ class ReportService
             $sections[$section->value]['total'] = Money::add($sections[$section->value]['total'], $amount);
         }
 
-        $netIncome = $this->profitAndLoss($userId, $from, $to)['lines']['net'];
+        $netIncome = $this->profitAndLoss($bookId, $from, $to)['lines']['net'];
 
         $operating = Money::add($netIncome, Money::add(
             $sections[CashFlowSection::NonCash->value]['total'],
@@ -253,12 +253,12 @@ class ReportService
         $financing = $sections[CashFlowSection::Financing->value]['total'];
         $netChange = Money::add($operating, Money::add($investing, $financing));
 
-        $cashBalance = function (?string $until) use ($userId, $cashIds): string {
+        $cashBalance = function (?string $until) use ($bookId, $cashIds): string {
             if ($until === null) {
                 return '0.00';
             }
 
-            $sums = $this->balancesByAccount($userId, null, $until);
+            $sums = $this->balancesByAccount($bookId, null, $until);
 
             return array_reduce(
                 $cashIds,
@@ -308,13 +308,13 @@ class ReportService
      *   count: int
      * }
      */
-    public function accountBalances(int $userId, string $asOf, string $search = ''): array
+    public function accountBalances(int $bookId, string $asOf, string $search = ''): array
     {
-        $sums = $this->balancesByAccount($userId, null, $asOf);
+        $sums = $this->balancesByAccount($bookId, null, $asOf);
         $term = mb_strtolower(trim($search));
 
         $accounts = Account::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->whereIn('id', array_keys($sums))
             ->orderBy('code')
             ->get();
@@ -379,10 +379,10 @@ class ReportService
     /**
      * @return Collection<int, Account>
      */
-    private function accountsOfType(int $userId, AccountType $type): Collection
+    private function accountsOfType(int $bookId, AccountType $type): Collection
     {
         return Account::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->where('type', $type)
             ->orderBy('code')
             ->get();
@@ -454,11 +454,11 @@ class ReportService
      *
      * @return array<int, array{debit: string, credit: string}>
      */
-    private function balancesByAccount(int $userId, ?string $from, ?string $to): array
+    private function balancesByAccount(int $bookId, ?string $from, ?string $to): array
     {
         return JournalLine::query()
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
-            ->where('journal_entries.user_id', $userId)
+            ->where('journal_entries.book_id', $bookId)
             ->when($from !== null, fn ($q) => $q->whereDate('journal_entries.date', '>=', $from))
             ->when($to !== null, fn ($q) => $q->whereDate('journal_entries.date', '<=', $to))
             ->groupBy('journal_lines.account_id')

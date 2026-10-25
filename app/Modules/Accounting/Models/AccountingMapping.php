@@ -2,7 +2,7 @@
 
 namespace App\Modules\Accounting\Models;
 
-use App\Modules\Shared\Traits\BelongsToUser;
+use App\Modules\Shared\Traits\BelongsToBook;
 use Database\Factories\AccountingMappingFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AccountingMapping extends Model
 {
-    use BelongsToUser;
+    use BelongsToBook;
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'book_id',
         'operation_type_id',
         'version',
         'is_active',

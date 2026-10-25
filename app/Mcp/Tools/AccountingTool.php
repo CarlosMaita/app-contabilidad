@@ -21,7 +21,7 @@ use UnitEnum;
 /**
  * Base de las tools del servidor contable. Todo corre como el dueño del
  * token (auth:sanctum fija Auth::user()), así el global scope de
- * BelongsToUser limita cada consulta a esa cuenta.
+ * BelongsToBook limita cada consulta a su contabilidad actual.
  */
 abstract class AccountingTool extends Tool
 {

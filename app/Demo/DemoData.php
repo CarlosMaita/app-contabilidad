@@ -38,7 +38,7 @@ class DemoData
     public function populate(User $user): void
     {
         // Las acciones de Operations y Accounting trabajan sobre el usuario
-        // autenticado (scope y autocompletado de user_id).
+        // autenticado (scope y autocompletado de book_id).
         $previous = Auth::user();
         Auth::setUser($user);
 
@@ -55,7 +55,7 @@ class DemoData
     private function loadAccounts(User $user): void
     {
         $this->accounts = Account::withoutGlobalScopes()
-            ->where('user_id', $user->id)
+            ->where('book_id', $user->personalBook()->id)
             ->get()
             ->keyBy('code')
             ->all();
@@ -76,7 +76,7 @@ class DemoData
             ['1.1.03.03', 'CxC de Estudio Norte SRL'],
         ] as [$code, $name]) {
             $this->accounts[$code] = Account::create([
-                'user_id' => $user->id,
+                'book_id' => $user->personalBook()->id,
                 'code' => $code,
                 'name' => $name,
                 'type' => $clients->type,
@@ -173,7 +173,7 @@ class DemoData
 
         foreach ($definitions as $code => $definition) {
             $type = OperationType::create([
-                'user_id' => $user->id,
+                'book_id' => $user->personalBook()->id,
                 'name' => $definition['name'],
                 'code' => $code,
                 'description' => $definition['description'],
@@ -193,7 +193,7 @@ class DemoData
 
             if ($definition['lines'] !== []) {
                 $mapping = AccountingMapping::create([
-                    'user_id' => $user->id,
+                    'book_id' => $user->personalBook()->id,
                     'operation_type_id' => $type->id,
                     'version' => 1,
                     'is_active' => true,
@@ -292,7 +292,7 @@ class DemoData
             $lines[] = ['side' => EntrySide::Credit, 'account_id' => $this->account($code)->id, 'amount' => $amount, 'memo' => null];
         }
 
-        $this->journal->post(userId: $user->id, date: $date, description: $description, lines: $lines);
+        $this->journal->post(bookId: $user->personalBook()->id, date: $date, description: $description, lines: $lines);
     }
 
     /** Día del mes de hace N meses, sin pasarse del fin de mes ni de hoy. */

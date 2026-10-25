@@ -2,6 +2,10 @@
     <x-page-header title="Dashboard" route="/dashboard" />
 
     <div class="flex flex-col gap-4 p-4 sm:gap-6 sm:p-6">
+        @if (session('status'))
+            <div class="note-accent text-sm">{{ session('status') }}</div>
+        @endif
+
         <div class="grid grid-cols-2 border-2 border-ink lg:grid-cols-4">
             <div class="border-b border-r border-neutral-300 bg-white p-3 sm:p-4 lg:border-b-0">
                 <div class="kicker">Activo total</div>

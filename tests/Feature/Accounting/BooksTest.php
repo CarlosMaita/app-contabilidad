@@ -15,8 +15,8 @@ use Livewire\Livewire;
  */
 function setupBooks(User $user): array
 {
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
-    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $ventas = Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
 
     return ['caja' => $caja, 'ventas' => $ventas];
 }
@@ -24,7 +24,7 @@ function setupBooks(User $user): array
 function postSale(User $user, Account $caja, Account $ventas, string $date, string $amount, string $description): JournalEntry
 {
     return app(JournalEntryBuilder::class)->post(
-        userId: $user->id,
+        bookId: bookOf($user)->id,
         date: $date,
         description: $description,
         lines: [

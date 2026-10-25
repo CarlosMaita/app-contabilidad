@@ -27,8 +27,8 @@ use Livewire\Livewire;
 function setupManual(User $user): array
 {
     return [
-        'caja' => Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']),
-        'gastos' => Account::factory()->for($user)->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']),
+        'caja' => Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']),
+        'gastos' => Account::factory()->for(bookOf($user))->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']),
     ];
 }
 
@@ -87,7 +87,7 @@ test('un asiento manual se puede revertir desde el diario', function () {
     $this->actingAs($user);
 
     $entry = app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-09-08', description: 'Ajuste',
+        bookId: bookOf($user)->id, date: '2026-09-08', description: 'Ajuste',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $s['gastos']->id, 'amount' => '50.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount' => '50.00', 'memo' => null],
@@ -105,9 +105,9 @@ test('revertir desde el diario un asiento de una operación anula la ejecución'
     $s = setupManual($user);
     $this->actingAs($user);
 
-    $type = OperationType::factory()->for($user)->create(['code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal']);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $type->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $type->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gastos']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id]);
 
@@ -121,7 +121,8 @@ test('revertir desde el diario un asiento de una operación anula la ejecución'
 });
 
 test('el período cerrado bloquea asientos manuales y reversiones con fecha cerrada', function () {
-    $user = User::factory()->create(['accounting_closed_until' => '2026-08-31']);
+    $user = User::factory()->create();
+    bookOf($user)->update(['accounting_closed_until' => '2026-08-31']);
     $s = setupManual($user);
     $this->actingAs($user);
 
@@ -147,10 +148,11 @@ test('el período cerrado bloquea asientos manuales y reversiones con fecha cerr
 });
 
 test('el período cerrado bloquea la ejecución de operaciones con fecha cerrada', function () {
-    $user = User::factory()->create(['accounting_closed_until' => '2026-08-31']);
+    $user = User::factory()->create();
+    bookOf($user)->update(['accounting_closed_until' => '2026-08-31']);
     $this->actingAs($user);
 
-    $type = OperationType::factory()->for($user)->create(['code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal']);
 
     expect(fn () => app(ExecuteOperation::class)->execute($type, ['monto' => '10.00'], '2026-08-15'))
@@ -164,7 +166,7 @@ test('el procesamiento retroactivo marca failed si el período ya está cerrado'
     $s = setupManual($user);
     $this->actingAs($user);
 
-    $type = OperationType::factory()->for($user)->create(['code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal']);
 
     // La ejecución entra con el período abierto y queda unmapped.
@@ -172,8 +174,8 @@ test('el procesamiento retroactivo marca failed si el período ya está cerrado'
     expect($execution->fresh()->status)->toBe(ExecutionStatus::Unmapped);
 
     // Luego se cierra el período y se configura el mapeo.
-    $user->update(['accounting_closed_until' => '2026-08-31']);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $type->id]);
+    bookOf($user)->update(['accounting_closed_until' => '2026-08-31']);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $type->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gastos']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id]);
 
@@ -192,13 +194,13 @@ test('el cierre de período se configura desde la página de reportes', function
         ->call('saveClosedUntil')
         ->assertHasNoErrors();
 
-    expect($user->fresh()->accounting_closed_until->toDateString())->toBe('2026-08-31');
+    expect(bookOf($user)->accounting_closed_until->toDateString())->toBe('2026-08-31');
 
     Livewire::test(Reports::class)
         ->set('closedUntil', '')
         ->call('saveClosedUntil');
 
-    expect($user->fresh()->accounting_closed_until)->toBeNull();
+    expect(bookOf($user)->accounting_closed_until)->toBeNull();
 });
 
 test('el dashboard muestra KPIs, últimos asientos y eventos por atender', function () {
@@ -206,17 +208,17 @@ test('el dashboard muestra KPIs, últimos asientos y eventos por atender', funct
     $s = setupManual($user);
     $this->actingAs($user);
 
-    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+    $ventas = Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
     app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: now()->toDateString(), description: 'Venta del mes',
+        bookId: bookOf($user)->id, date: now()->toDateString(), description: 'Venta del mes',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $s['caja']->id, 'amount' => '300.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $ventas->id, 'amount' => '300.00', 'memo' => null],
         ],
     );
 
-    $type = OperationType::factory()->for($user)->create(['code' => 'pago']);
-    OperationExecution::factory()->for($user)->create([
+    $type = OperationType::factory()->for(bookOf($user))->create(['code' => 'pago']);
+    OperationExecution::factory()->for(bookOf($user))->create([
         'operation_type_id' => $type->id,
         'status' => ExecutionStatus::Unmapped,
     ]);
@@ -239,7 +241,7 @@ test('duplicar un asiento pre-rellena el formulario sin registrar nada', functio
     $this->actingAs($user);
 
     $entry = app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-08-15', description: 'Pago de luz',
+        bookId: bookOf($user)->id, date: '2026-08-15', description: 'Pago de luz',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $s['gastos']->id, 'amount' => '120.50', 'memo' => 'factura agosto'],
             ['side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount' => '120.50', 'memo' => null],
@@ -267,7 +269,7 @@ test('no se puede duplicar un asiento de otro usuario', function () {
     $owner = User::factory()->create();
     $s = setupManual($owner);
     $entry = app(JournalEntryBuilder::class)->post(
-        userId: $owner->id, date: '2026-08-15', description: 'Ajeno',
+        bookId: bookOf($owner)->id, date: '2026-08-15', description: 'Ajeno',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $s['gastos']->id, 'amount' => '10.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount' => '10.00', 'memo' => null],

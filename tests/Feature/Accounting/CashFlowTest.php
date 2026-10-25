@@ -23,13 +23,13 @@ use Livewire\Livewire;
  */
 function setupCashFlow(User $user): array
 {
-    DefaultChartOfAccounts::seedFor($user);
+    DefaultChartOfAccounts::seedFor(bookOf($user));
 
     $acc = fn (string $code): Account => Account::withoutGlobalScopes()
-        ->where('user_id', $user->id)->where('code', $code)->firstOrFail();
+        ->where('book_id', bookOf($user)->id)->where('code', $code)->firstOrFail();
 
     $post = fn (string $date, string $debit, string $credit, string $amount) => app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: $date, description: "Mov {$debit}/{$credit}",
+        bookId: bookOf($user)->id, date: $date, description: "Mov {$debit}/{$credit}",
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $acc($debit)->id, 'amount' => $amount, 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $acc($credit)->id, 'amount' => $amount, 'memo' => null],
@@ -63,7 +63,7 @@ test('el flujo de efectivo discrimina actividades y concilia con caja y bancos',
     $user = User::factory()->create();
     setupCashFlow($user);
 
-    $cf = app(ReportService::class)->cashFlow($user->id, '2026-09-01', '2026-09-30');
+    $cf = app(ReportService::class)->cashFlow(bookOf($user)->id, '2026-09-01', '2026-09-30');
 
     expect($cf['net_income'])->toBe('26000.00')                                 // 30.000 − 1.000 − 3.000
         ->and(rowAmount($cf['sections']['non_cash'], '1.2.02.01'))->toBe('1000.00')
@@ -91,7 +91,7 @@ test('sin fecha desde el flujo arranca en cero y sigue conciliando', function ()
     $user = User::factory()->create();
     setupCashFlow($user);
 
-    $cf = app(ReportService::class)->cashFlow($user->id, null, '2026-09-30');
+    $cf = app(ReportService::class)->cashFlow(bookOf($user)->id, null, '2026-09-30');
 
     expect($cf['cash_opening'])->toBe('0.00')
         ->and($cf['cash_closing'])->toBe('43000.00')
@@ -103,8 +103,8 @@ test('el flujo oculta cuentas sin variación salvo que se pidan', function () {
     $user = User::factory()->create();
     setupCashFlow($user);
 
-    $oculto = app(ReportService::class)->cashFlow($user->id, '2026-09-01', '2026-09-30');
-    $visible = app(ReportService::class)->cashFlow($user->id, '2026-09-01', '2026-09-30', includeZero: true);
+    $oculto = app(ReportService::class)->cashFlow(bookOf($user)->id, '2026-09-01', '2026-09-30');
+    $visible = app(ReportService::class)->cashFlow(bookOf($user)->id, '2026-09-01', '2026-09-30', includeZero: true);
 
     expect(rowAmount($oculto['sections']['operating'], '2.1.01'))->toBeNull()
         ->and(rowAmount($visible['sections']['operating'], '2.1.01'))->toBe('0.00')
@@ -116,20 +116,20 @@ test('las auxiliares se consolidan en su cuenta principal dentro del flujo', fun
     ['acc' => $acc] = setupCashFlow($user);
 
     $clientes = $acc('1.1.03');
-    $luis = Account::factory()->for($user)->create([
+    $luis = Account::factory()->for(bookOf($user))->create([
         'code' => '1.1.03.01', 'name' => 'CxC de Luis', 'type' => 'asset',
         'parent_id' => $clientes->id, 'is_auxiliary' => true,
     ]);
 
     app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-09-20', description: 'Venta a Luis',
+        bookId: bookOf($user)->id, date: '2026-09-20', description: 'Venta a Luis',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $luis->id, 'amount' => '4000.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $acc('4.1.01')->id, 'amount' => '4000.00', 'memo' => null],
         ],
     );
 
-    $cf = app(ReportService::class)->cashFlow($user->id, '2026-09-01', '2026-09-30');
+    $cf = app(ReportService::class)->cashFlow(bookOf($user)->id, '2026-09-01', '2026-09-30');
 
     expect(rowAmount($cf['sections']['operating'], '1.1.03'))->toBe('-24000.00')
         ->and(rowAmount($cf['sections']['operating'], '1.1.03.01'))->toBeNull()
@@ -140,19 +140,19 @@ test('la actividad se hereda del padre y sync clasifica cuentas existentes', fun
     $user = User::factory()->create();
 
     // Plan viejo sin clasificar: Caja coincide con el plan base.
-    $activo = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Activo corriente', 'type' => 'asset', 'is_postable' => false]);
-    $caja = Account::factory()->for($user)->create(['code' => '1.1.01', 'name' => 'Caja', 'type' => 'asset', 'parent_id' => $activo->id]);
-    $cajaChica = Account::factory()->for($user)->create(['code' => '1.1.01.01', 'name' => 'Caja chica', 'type' => 'asset', 'parent_id' => $caja->id]);
+    $activo = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Activo corriente', 'type' => 'asset', 'is_postable' => false]);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1.01', 'name' => 'Caja', 'type' => 'asset', 'parent_id' => $activo->id]);
+    $cajaChica = Account::factory()->for(bookOf($user))->create(['code' => '1.1.01.01', 'name' => 'Caja chica', 'type' => 'asset', 'parent_id' => $caja->id]);
 
     expect($caja->effectiveCashFlowSection()->value)->toBe('operating');
 
-    DefaultChartOfAccounts::classifyFor($user);
+    DefaultChartOfAccounts::classifyFor(bookOf($user));
 
     expect($caja->fresh()->cash_flow_section->value)->toBe('cash')
         // Sin clasificación propia, la sub-cuenta hereda del padre.
         ->and($cajaChica->fresh()->effectiveCashFlowSection()->value)->toBe('cash')
         // Idempotente.
-        ->and(DefaultChartOfAccounts::classifyFor($user))->toBe(0);
+        ->and(DefaultChartOfAccounts::classifyFor(bookOf($user)))->toBe(0);
 });
 
 test('la pestaña de flujo de efectivo se muestra y exporta', function () {

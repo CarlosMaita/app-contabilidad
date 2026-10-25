@@ -4,6 +4,7 @@ namespace App\Modules\Operations\Livewire;
 
 use App\Modules\Operations\Enums\VariableType;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\CurrentBook;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -90,7 +91,7 @@ class OperationTypes extends Component
                 'max:60',
                 'regex:/^[a-z0-9]+(_[a-z0-9]+)*$/',
                 Rule::unique('operation_types', 'code')
-                    ->where('user_id', auth()->id())
+                    ->where('book_id', CurrentBook::id())
                     ->ignore($this->editingId),
             ],
             'description' => ['nullable', 'string', 'max:500'],

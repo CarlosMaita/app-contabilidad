@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Modules\Accounting\Enums\EntrySide;
 use App\Modules\Accounting\Services\JournalEntryBuilder;
+use App\Modules\Shared\Books\CurrentBook;
 use App\Modules\Shared\Money\Money;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
@@ -53,7 +54,7 @@ class RegistrarAsiento extends AccountingTool
 
         return $this->attempt(function () use ($builder, $validated, $lines) {
             $entry = $builder->post(
-                userId: auth()->id(),
+                bookId: CurrentBook::id(),
                 date: $validated['fecha'],
                 description: $validated['descripcion'],
                 lines: $lines,

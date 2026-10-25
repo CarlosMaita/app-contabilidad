@@ -29,8 +29,8 @@ test('cada usuario solo ve sus propias cuentas', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
-    Account::factory()->for($userA)->create(['code' => '1', 'name' => 'Caja A']);
-    Account::factory()->for($userB)->create(['code' => '1', 'name' => 'Caja B']);
+    Account::factory()->for(bookOf($userA))->create(['code' => '1', 'name' => 'Caja A']);
+    Account::factory()->for(bookOf($userB))->create(['code' => '1', 'name' => 'Caja B']);
 
     $this->actingAs($userA);
 
@@ -42,8 +42,8 @@ test('el código de cuenta es único por usuario pero puede repetirse entre usua
     $userA = User::factory()->create();
     $userB = User::factory()->create();
 
-    Account::factory()->for($userA)->create(['code' => '1.1']);
-    Account::factory()->for($userB)->create(['code' => '1.1']);
+    Account::factory()->for(bookOf($userA))->create(['code' => '1.1']);
+    Account::factory()->for(bookOf($userB))->create(['code' => '1.1']);
 
     expect(Account::withoutGlobalScopes()->where('code', '1.1')->count())->toBe(2);
 
@@ -63,7 +63,7 @@ test('al registrarse se precarga el plan de cuentas base', function () {
 
     event(new Registered($user));
 
-    $accounts = Account::withoutGlobalScopes()->where('user_id', $user->id)->get();
+    $accounts = Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->get();
 
     expect($accounts)->toHaveCount(51)
         ->and($accounts->firstWhere('code', '1.1.01')->name)->toBe('Caja')
@@ -84,20 +84,20 @@ test('al registrarse se precarga el plan de cuentas base', function () {
 
     // El evento es idempotente: no duplica el plan.
     event(new Registered($user));
-    expect(Account::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe(51);
+    expect(Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count())->toBe(51);
 });
 
 test('sync-chart completa el plan de un usuario existente sin tocar sus ramas propias', function () {
     $user = User::factory()->create();
 
     // Plan viejo simulado: 4.1 era "Ventas" (otra semántica) y 1.2.01 ya existe como hoja.
-    Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
-    Account::factory()->for($user)->create(['code' => '1.2', 'name' => 'Activo no corriente', 'type' => 'asset', 'is_postable' => false]);
-    $bienes = Account::factory()->for($user)->create(['code' => '1.2.01', 'name' => 'Bienes de uso', 'type' => 'asset', 'is_postable' => true]);
+    Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+    Account::factory()->for(bookOf($user))->create(['code' => '1.2', 'name' => 'Activo no corriente', 'type' => 'asset', 'is_postable' => false]);
+    $bienes = Account::factory()->for(bookOf($user))->create(['code' => '1.2.01', 'name' => 'Bienes de uso', 'type' => 'asset', 'is_postable' => true]);
 
-    $added = DefaultChartOfAccounts::syncFor($user);
+    $added = DefaultChartOfAccounts::syncFor(bookOf($user));
 
-    $accounts = Account::withoutGlobalScopes()->where('user_id', $user->id)->get();
+    $accounts = Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->get();
 
     // La rama 4.1 (nombre distinto) se saltó entera: sin hijas nuevas.
     expect($accounts->firstWhere('code', '4.1')->name)->toBe('Ventas')
@@ -111,7 +111,7 @@ test('sync-chart completa el plan de un usuario existente sin tocar sus ramas pr
         ->and($added)->toBeGreaterThan(0);
 
     // Idempotente: una segunda corrida no agrega nada.
-    expect(DefaultChartOfAccounts::syncFor($user))->toBe(0);
+    expect(DefaultChartOfAccounts::syncFor(bookOf($user)))->toBe(0);
 });
 
 test('se puede crear una cuenta desde el componente livewire', function () {
@@ -129,14 +129,14 @@ test('se puede crear una cuenta desde el componente livewire', function () {
     expect(Account::where('code', '1')->first())
         ->not->toBeNull()
         ->name->toBe('Activo')
-        ->user_id->toBe($user->id);
+        ->book_id->toBe(bookOf($user)->id);
 });
 
 test('una sub-cuenta hereda el tipo del padre y el padre deja de ser imputable', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $parent = Account::factory()->for($user)->create([
+    $parent = Account::factory()->for(bookOf($user))->create([
         'code' => '4',
         'type' => AccountType::Income,
         'is_postable' => true,
@@ -161,11 +161,11 @@ test('no se puede eliminar una cuenta con apuntes o usada en un mapeo', function
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
-    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $ventas = Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income']);
 
     app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: '2026-09-05', description: 'Venta',
+        bookId: bookOf($user)->id, date: '2026-09-05', description: 'Venta',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $caja->id, 'amount' => '10.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $ventas->id, 'amount' => '10.00', 'memo' => null],
@@ -177,8 +177,8 @@ test('no se puede eliminar una cuenta con apuntes o usada en un mapeo', function
     expect(Account::find($caja->id))->not->toBeNull();
 
     // Usada en un mapeo: bloqueada.
-    $sinApuntes = Account::factory()->for($user)->create(['code' => '6.9', 'name' => 'Gasto sin uso', 'type' => 'expense']);
-    $mapping = AccountingMapping::factory()->for($user)->create();
+    $sinApuntes = Account::factory()->for(bookOf($user))->create(['code' => '6.9', 'name' => 'Gasto sin uso', 'type' => 'expense']);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create();
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'account_id' => $sinApuntes->id]);
 
     Livewire::test(ChartOfAccounts::class)->call('delete', $sinApuntes->id);
@@ -189,8 +189,8 @@ test('no se puede eliminar una cuenta con sub-cuentas', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $parent = Account::factory()->for($user)->create(['code' => '1']);
-    Account::factory()->for($user)->create(['code' => '1.1', 'parent_id' => $parent->id]);
+    $parent = Account::factory()->for(bookOf($user))->create(['code' => '1']);
+    Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'parent_id' => $parent->id]);
 
     Livewire::test(ChartOfAccounts::class)->call('delete', $parent->id);
 
@@ -201,8 +201,8 @@ test('editar una cuenta no permite ciclos de padre', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $parent = Account::factory()->for($user)->create(['code' => '1', 'type' => AccountType::Asset]);
-    $child = Account::factory()->for($user)->create(['code' => '1.1', 'parent_id' => $parent->id, 'type' => AccountType::Asset]);
+    $parent = Account::factory()->for(bookOf($user))->create(['code' => '1', 'type' => AccountType::Asset]);
+    $child = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'parent_id' => $parent->id, 'type' => AccountType::Asset]);
 
     Livewire::test(ChartOfAccounts::class)
         ->call('edit', $parent->id)

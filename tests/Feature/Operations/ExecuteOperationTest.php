@@ -14,7 +14,7 @@ use Livewire\Livewire;
 
 function makePaymentOperation(User $user): OperationType
 {
-    $type = OperationType::factory()->for($user)->create(['name' => 'Pago', 'code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['name' => 'Pago', 'code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal', 'sort_order' => 0]);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'detalle', 'label' => 'Detalle', 'type' => 'string', 'is_required' => false, 'sort_order' => 1]);
 
@@ -78,7 +78,7 @@ test('ejecutar una operación persiste el payload y despacha OperationExecuted',
         ->and($execution->payload)->toBe(['monto' => '150.50', 'detalle' => 'Factura 0001'])
         ->and($execution->executed_at->toDateString())->toBe('2026-09-05')
         ->and($execution->status)->toBe(ExecutionStatus::Pending)
-        ->and($execution->user_id)->toBe($user->id);
+        ->and($execution->book_id)->toBe(bookOf($user)->id);
 
     Event::assertDispatched(OperationExecuted::class, fn (OperationExecuted $e): bool => $e->execution->is($execution));
 });
@@ -87,10 +87,10 @@ test('una variable de tipo cuenta solo acepta cuentas imputables del usuario', f
     $user = User::factory()->create();
     $other = User::factory()->create();
 
-    $ownAccount = Account::factory()->for($user)->create(['code' => '1.1', 'is_postable' => true]);
-    $foreignAccount = Account::factory()->for($other)->create(['code' => '9.9', 'is_postable' => true]);
+    $ownAccount = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'is_postable' => true]);
+    $foreignAccount = Account::factory()->for(bookOf($other))->create(['code' => '9.9', 'is_postable' => true]);
 
-    $type = OperationType::factory()->for($user)->create(['code' => 'cobro']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['code' => 'cobro']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'cuenta_destino', 'label' => 'Cuenta destino', 'type' => 'account']);
 
     $this->actingAs($user);
@@ -112,12 +112,12 @@ test('el log de eventos lista y filtra por estado', function () {
     $user = User::factory()->create();
     $type = makePaymentOperation($user);
 
-    OperationExecution::factory()->for($user)->create([
+    OperationExecution::factory()->for(bookOf($user))->create([
         'operation_type_id' => $type->id,
         'status' => ExecutionStatus::Pending,
         'description' => 'evento pendiente',
     ]);
-    OperationExecution::factory()->for($user)->create([
+    OperationExecution::factory()->for(bookOf($user))->create([
         'operation_type_id' => $type->id,
         'status' => ExecutionStatus::Failed,
         'description' => 'evento fallido',
@@ -136,7 +136,7 @@ test('el log de eventos lista y filtra por estado', function () {
 test('el log de eventos no muestra ejecuciones de otros usuarios', function () {
     $other = User::factory()->create();
     $foreignType = makePaymentOperation($other);
-    OperationExecution::factory()->for($other)->create([
+    OperationExecution::factory()->for(bookOf($other))->create([
         'operation_type_id' => $foreignType->id,
         'description' => 'evento ajeno',
     ]);

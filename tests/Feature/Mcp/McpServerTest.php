@@ -46,7 +46,7 @@ function mcpCall(string $token, string $method, array $params = [], int $id = 1)
 
 function codeId(User $user, string $code): int
 {
-    return Account::withoutGlobalScopes()->where('user_id', $user->id)->where('code', $code)->value('id');
+    return Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->where('code', $code)->value('id');
 }
 
 test('el endpoint exige un token válido', function () {
@@ -116,7 +116,7 @@ test('las tools de lectura devuelven los libros y reportes de la cuenta', functi
 
 test('registrar_asiento crea un asiento balanceado con cuentas por código', function () {
     $user = mcpUser();
-    $before = JournalEntry::withoutGlobalScopes()->where('user_id', $user->id)->count();
+    $before = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count();
 
     ContabilidadServer::actingAs($user)->tool(RegistrarAsiento::class, [
         'fecha' => now()->toDateString(),
@@ -127,15 +127,15 @@ test('registrar_asiento crea un asiento balanceado con cuentas por código', fun
         ],
     ])->assertOk()->assertHasNoErrors()->assertSee('Ajuste por MCP');
 
-    $entry = JournalEntry::withoutGlobalScopes()->where('user_id', $user->id)->where('description', 'Ajuste por MCP')->sole();
-    expect(JournalEntry::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBe($before + 1)
+    $entry = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->where('description', 'Ajuste por MCP')->sole();
+    expect(JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count())->toBe($before + 1)
         ->and((string) $entry->lines()->where('account_id', codeId($user, '6.3.02'))->value('debit'))->toBe('1250.50');
 });
 
 test('registrar_asiento rechaza asientos inválidos sin registrar nada', function () {
     $user = mcpUser();
-    $user->update(['accounting_closed_until' => now()->subMonth()->endOfMonth()->toDateString()]);
-    $count = fn () => JournalEntry::withoutGlobalScopes()->where('user_id', $user->id)->count();
+    bookOf($user)->update(['accounting_closed_until' => now()->subMonth()->endOfMonth()->toDateString()]);
+    $count = fn () => JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count();
     $before = $count();
     $as = ContabilidadServer::actingAs($user);
     $line = fn (string $side, string $code, string $amount) => ['lado' => $side, 'cuenta' => $code, 'monto' => $amount];
@@ -170,7 +170,7 @@ test('ejecutar_operacion registra el evento y genera el asiento por el mapeo', f
         'descripcion' => 'Venta por MCP',
     ])->assertOk()->assertHasNoErrors()->assertSee('"estado":"posted"')->assertSee('1210.00');
 
-    $execution = OperationExecution::withoutGlobalScopes()->where('user_id', $user->id)->where('description', 'Venta por MCP')->sole();
+    $execution = OperationExecution::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->where('description', 'Venta por MCP')->sole();
     expect($execution->payload['cliente'])->toBe(codeId($user, '1.1.03.02'))
         ->and(JournalEntry::withoutGlobalScopes()->where('operation_execution_id', $execution->id)->exists())->toBeTrue();
 
@@ -186,7 +186,7 @@ test('ejecutar_operacion registra el evento y genera el asiento por el mapeo', f
 test('revertir_asiento genera contra-asiento y anula la operación de origen', function () {
     $user = mcpUser();
     $as = ContabilidadServer::actingAs($user);
-    $entries = JournalEntry::withoutGlobalScopes()->where('user_id', $user->id);
+    $entries = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id);
 
     $manual = (clone $entries)->whereNull('operation_execution_id')->orderBy('number')->first();
     $as->tool(RevertirAsiento::class, ['numero' => $manual->number])->assertOk()->assertSee('contra-asiento');
@@ -207,7 +207,7 @@ test('crear_cuenta respeta las reglas del plan de cuentas', function () {
         'codigo' => '1.1.03.04', 'nombre' => 'CxC de Marta', 'cuenta_padre' => '1.1.03', 'auxiliar' => true,
     ])->assertOk()->assertHasNoErrors();
 
-    $marta = Account::withoutGlobalScopes()->where('user_id', $user->id)->where('code', '1.1.03.04')->sole();
+    $marta = Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->where('code', '1.1.03.04')->sole();
     expect($marta->is_auxiliary)->toBeTrue()
         ->and($marta->type->value)->toBe('asset')
         ->and($marta->is_postable)->toBeTrue();

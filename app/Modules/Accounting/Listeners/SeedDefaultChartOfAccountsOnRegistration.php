@@ -17,12 +17,14 @@ class SeedDefaultChartOfAccountsOnRegistration
             return;
         }
 
+        $book = $user->personalBook();
+
         $alreadyHasAccounts = Account::withoutGlobalScopes()
-            ->where('user_id', $user->id)
+            ->where('book_id', $book->id)
             ->exists();
 
         if (! $alreadyHasAccounts) {
-            DefaultChartOfAccounts::seedFor($user);
+            DefaultChartOfAccounts::seedFor($book);
         }
     }
 }

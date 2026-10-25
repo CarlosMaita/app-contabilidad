@@ -35,7 +35,7 @@ class ReverseJournalEntry
 
         return DB::transaction(function () use ($entry, $lines, $date): JournalEntry {
             $reversal = $this->builder->post(
-                userId: $entry->user_id,
+                bookId: $entry->book_id,
                 date: $date ?? $entry->date->toDateString(),
                 description: "Reversión del asiento #{$entry->number}: {$entry->description}",
                 lines: $lines,

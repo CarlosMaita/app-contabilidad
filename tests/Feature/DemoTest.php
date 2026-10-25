@@ -24,19 +24,19 @@ test('ver como demo crea una cuenta descartable con datos de ejemplo y entra', f
 
     $this->get('/dashboard')->assertOk()->assertSee('cuenta de prueba');
 
-    $entries = JournalEntry::withoutGlobalScopes()->where('user_id', $user->id);
-    $executions = OperationExecution::withoutGlobalScopes()->where('user_id', $user->id);
+    $entries = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id);
+    $executions = OperationExecution::withoutGlobalScopes()->where('book_id', bookOf($user)->id);
 
     expect($entries->count())->toBeGreaterThan(20)
         ->and((clone $executions)->where('status', ExecutionStatus::Unmapped)->count())->toBe(1)
         ->and((clone $executions)->where('status', ExecutionStatus::Voided)->count())->toBe(1)
         ->and((clone $executions)->where('status', ExecutionStatus::Failed)->count())->toBe(0)
-        ->and(Account::withoutGlobalScopes()->where('user_id', $user->id)->where('is_auxiliary', true)->count())->toBe(3);
+        ->and(Account::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->where('is_auxiliary', true)->count())->toBe(3);
 
     $reports = app(ReportService::class);
-    $balance = $reports->balanceSheet($user->id, now()->toDateString());
-    $cashFlow = $reports->cashFlow($user->id, now()->subMonths(3)->toDateString(), now()->toDateString());
-    $month = $reports->profitAndLoss($user->id, now()->startOfMonth()->toDateString(), now()->toDateString());
+    $balance = $reports->balanceSheet(bookOf($user)->id, now()->toDateString());
+    $cashFlow = $reports->cashFlow(bookOf($user)->id, now()->subMonths(3)->toDateString(), now()->toDateString());
+    $month = $reports->profitAndLoss(bookOf($user)->id, now()->startOfMonth()->toDateString(), now()->toDateString());
 
     expect($balance['check']['balanced'])->toBeTrue()
         ->and($cashFlow['check']['balanced'])->toBeTrue()
@@ -59,12 +59,13 @@ test('cada visitante demo tiene su propia cuenta', function () {
 test('al salir se borra la cuenta demo con todos sus datos', function () {
     $this->post('/demo');
     $id = auth()->id();
+    $bookId = auth()->user()->personalBook()->id;
 
     $this->post('/logout')->assertRedirect('/');
 
     expect(User::find($id))->toBeNull()
-        ->and(JournalEntry::withoutGlobalScopes()->where('user_id', $id)->count())->toBe(0)
-        ->and(Account::withoutGlobalScopes()->where('user_id', $id)->count())->toBe(0);
+        ->and(JournalEntry::withoutGlobalScopes()->where('book_id', $bookId)->count())->toBe(0)
+        ->and(Account::withoutGlobalScopes()->where('book_id', $bookId)->count())->toBe(0);
 });
 
 test('salir con una cuenta normal no la borra', function () {
@@ -104,5 +105,5 @@ test('el seeder crea el usuario demo fijo', function () {
     $user = User::where('email', DemoSeeder::EMAIL)->sole();
 
     expect($user->is_demo)->toBeFalse()
-        ->and(JournalEntry::withoutGlobalScopes()->where('user_id', $user->id)->count())->toBeGreaterThan(20);
+        ->and(JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($user)->id)->count())->toBeGreaterThan(20);
 });

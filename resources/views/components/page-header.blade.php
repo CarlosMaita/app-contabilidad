@@ -6,7 +6,7 @@
         <span class="hidden font-mono text-xs text-neutral-700 sm:inline">{{ $route }}</span>
     @endif
     <div class="ml-auto flex flex-wrap items-center gap-3">
-        <span class="text-xs text-neutral-700">Ejercicio {{ now()->year }} · ARS</span>
+        <span class="hidden text-xs text-neutral-700 sm:inline">{{ \App\Modules\Shared\Books\CurrentBook::get()?->label() }} · {{ now()->year }}</span>
         {{ $slot }}
     </div>
 </div>

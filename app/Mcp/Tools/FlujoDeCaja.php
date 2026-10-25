@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Modules\Accounting\Services\ReportService;
+use App\Modules\Shared\Books\CurrentBook;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\ResponseFactory;
@@ -24,7 +25,7 @@ class FlujoDeCaja extends AccountingTool
         ]);
 
         return $this->respond($reports->cashFlow(
-            auth()->id(),
+            CurrentBook::id(),
             $request->get('desde') ?? now()->startOfYear()->toDateString(),
             $request->get('hasta') ?? now()->toDateString(),
             (bool) $request->get('incluir_cero', false),

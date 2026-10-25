@@ -78,7 +78,7 @@ class LedgerService
             ->whereIn('account_id', $accountIds)
             ->whereHas('entry', function (Builder $q) use ($account, $from, $to, $until): void {
                 $q->withoutGlobalScopes()
-                    ->where('user_id', $account->user_id)
+                    ->where('book_id', $account->book_id)
                     ->when($until !== null, fn (Builder $q) => $q->whereDate('date', '<', $until))
                     ->when($from !== null, fn (Builder $q) => $q->whereDate('date', '>=', $from))
                     ->when($to !== null, fn (Builder $q) => $q->whereDate('date', '<=', $to));

@@ -9,6 +9,7 @@ use App\Modules\Accounting\Exceptions\UnbalancedEntryException;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\JournalEntryBuilder;
+use App\Modules\Shared\Books\CurrentBook;
 use App\Modules\Shared\Money\Money;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -98,7 +99,7 @@ class ManualEntryForm extends Component
 
         try {
             $entry = $builder->post(
-                userId: auth()->id(),
+                bookId: CurrentBook::id(),
                 date: $this->date,
                 description: $this->description,
                 lines: array_map(fn (array $line): array => [

@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use App\Modules\Accounting\Models\AccountingMapping;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +17,7 @@ class AccountingMappingFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'book_id' => Book::factory(),
             'operation_type_id' => OperationType::factory(),
             'version' => 1,
             'is_active' => true,

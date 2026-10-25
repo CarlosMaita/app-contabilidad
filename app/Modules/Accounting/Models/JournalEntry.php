@@ -2,9 +2,10 @@
 
 namespace App\Modules\Accounting\Models;
 
+use App\Models\User;
 use App\Modules\Accounting\Enums\JournalEntryStatus;
 use App\Modules\Operations\Models\OperationExecution;
-use App\Modules\Shared\Traits\BelongsToUser;
+use App\Modules\Shared\Traits\BelongsToBook;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,10 +13,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class JournalEntry extends Model
 {
-    use BelongsToUser;
+    use BelongsToBook;
 
     protected $fillable = [
-        'user_id',
+        'book_id',
+        'created_by',
         'number',
         'date',
         'description',
@@ -49,6 +51,12 @@ class JournalEntry extends Model
     public function reverses(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_entry_id');
+    }
+
+    /** Miembro que registró el asiento (en contabilidades compartidas). */
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function execution(): BelongsTo

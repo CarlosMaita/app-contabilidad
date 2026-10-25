@@ -3,6 +3,7 @@
         'General' => [
             ['label' => 'Dashboard', 'route' => 'dashboard', 'active' => 'dashboard'],
             ['label' => 'Saldos de cuentas', 'route' => 'balances.index', 'active' => 'balances.*'],
+            ['label' => 'Mis contabilidades', 'route' => 'books.index', 'active' => 'books.*'],
         ],
         'Operativo' => [
             ['label' => 'Tipos de operación', 'route' => 'operations.index', 'active' => 'operations.*'],
@@ -27,6 +28,8 @@
         </a>
     </div>
 
+    <x-book-switcher />
+
     <x-nav-links :groups="$groups" />
 
     <x-nav-user class="mt-auto" />
@@ -40,7 +43,10 @@
     <div class="flex items-center gap-3 border-b-2 border-ink px-4 py-3">
         <a href="{{ route('dashboard') }}" wire:navigate class="flex min-w-0 items-center gap-2.5">
             <img src="/icons/icon-192.png" alt="" class="h-7 w-7 shrink-0">
-            <span class="truncate text-[15px] font-extrabold">Contabilidad</span>
+            <span class="min-w-0 leading-tight">
+                <span class="block truncate text-[15px] font-extrabold">Contabilidad</span>
+                <span class="block truncate text-[11px] text-neutral-600">{{ \App\Modules\Shared\Books\CurrentBook::get()?->label() }}</span>
+            </span>
         </a>
         <button type="button" x-on:click="open = true" x-bind:aria-expanded="open" aria-controls="mobile-menu"
                 class="btn-secondary ml-auto shrink-0 px-3">
@@ -74,6 +80,8 @@
                     ×
                 </button>
             </div>
+
+            <x-book-switcher />
 
             <x-nav-links :groups="$groups" mobile />
 

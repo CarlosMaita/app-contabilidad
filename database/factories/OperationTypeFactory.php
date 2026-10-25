@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -19,7 +19,7 @@ class OperationTypeFactory extends Factory
         $name = fake()->unique()->words(2, true);
 
         return [
-            'user_id' => User::factory(),
+            'book_id' => Book::factory(),
             'name' => ucfirst($name),
             'code' => Str::slug($name, '_'),
             'description' => null,

@@ -21,15 +21,15 @@ use Livewire\Livewire;
  */
 function setupOperation(User $user, array $mappingLines = []): array
 {
-    $caja = Account::factory()->for($user)->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
-    $gasto = Account::factory()->for($user)->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']);
-    $iva = Account::factory()->for($user)->create(['code' => '1.2', 'name' => 'IVA crédito', 'type' => 'asset']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1', 'name' => 'Caja', 'type' => 'asset']);
+    $gasto = Account::factory()->for(bookOf($user))->create(['code' => '5.1', 'name' => 'Gastos', 'type' => 'expense']);
+    $iva = Account::factory()->for(bookOf($user))->create(['code' => '1.2', 'name' => 'IVA crédito', 'type' => 'asset']);
 
-    $type = OperationType::factory()->for($user)->create(['name' => 'Pago', 'code' => 'pago']);
+    $type = OperationType::factory()->for(bookOf($user))->create(['name' => 'Pago', 'code' => 'pago']);
     OperationVariable::factory()->for($type, 'operationType')->create(['name' => 'monto', 'label' => 'Monto', 'type' => 'decimal']);
 
     if ($mappingLines !== []) {
-        $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $type->id]);
+        $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $type->id]);
         foreach ($mappingLines as $order => $line) {
             MappingLine::factory()->create([
                 'accounting_mapping_id' => $mapping->id,
@@ -52,7 +52,7 @@ test('ejecutar una operación con mapeo genera un asiento balanceado y marca pos
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id, 'description_template' => 'Pago por {monto}']);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id, 'description_template' => 'Pago por {monto}']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id]);
 
@@ -115,7 +115,7 @@ test('las expresiones resuelven IVA: neto + impuesto = total', function () {
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'round(monto / 1.21, 2)']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['iva']->id, 'amount_expression' => 'monto - round(monto / 1.21, 2)']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto']);
@@ -135,7 +135,7 @@ test('un asiento que no balancea marca la ejecución failed con el error visible
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'monto']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto * 2']);
 
@@ -151,7 +151,7 @@ test('una expresión inválida marca la ejecución failed', function () {
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'variable_inexistente * 2']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto']);
 
@@ -166,7 +166,7 @@ test('las funciones fuera de la whitelist no están disponibles', function () {
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'constant("PHP_INT_MAX")']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto']);
 
@@ -181,8 +181,8 @@ test('una cuenta no imputable marca la ejecución failed', function () {
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $rubro = Account::factory()->for($user)->create(['code' => '5', 'name' => 'Gastos (rubro)', 'type' => 'expense', 'is_postable' => false]);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $rubro = Account::factory()->for(bookOf($user))->create(['code' => '5', 'name' => 'Gastos (rubro)', 'type' => 'expense', 'is_postable' => false]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $rubro->id, 'amount_expression' => 'monto']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto']);
 
@@ -197,7 +197,7 @@ test('las líneas con monto cero se descartan', function () {
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'monto']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['iva']->id, 'amount_expression' => 'monto * 0']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id, 'amount_expression' => 'monto']);
@@ -214,7 +214,7 @@ test('la cuenta de una línea puede venir de una variable del payload', function
     $s = setupOperation($user);
     OperationVariable::factory()->for($s['type'], 'operationType')->create(['name' => 'cuenta_origen', 'label' => 'Cuenta de origen', 'type' => 'account', 'sort_order' => 1]);
 
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id, 'amount_expression' => 'monto']);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => null, 'account_variable' => 'cuenta_origen', 'amount_expression' => 'monto']);
 
@@ -228,7 +228,7 @@ test('la numeración de asientos es correlativa por usuario', function () {
     $userA = User::factory()->create();
     $this->actingAs($userA);
     $sA = setupOperation($userA);
-    $mappingA = AccountingMapping::factory()->for($userA)->create(['operation_type_id' => $sA['type']->id]);
+    $mappingA = AccountingMapping::factory()->for(bookOf($userA))->create(['operation_type_id' => $sA['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mappingA->id, 'side' => EntrySide::Debit, 'account_id' => $sA['gasto']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mappingA->id, 'side' => EntrySide::Credit, 'account_id' => $sA['caja']->id]);
 
@@ -238,14 +238,14 @@ test('la numeración de asientos es correlativa por usuario', function () {
     $userB = User::factory()->create();
     $this->actingAs($userB);
     $sB = setupOperation($userB);
-    $mappingB = AccountingMapping::factory()->for($userB)->create(['operation_type_id' => $sB['type']->id]);
+    $mappingB = AccountingMapping::factory()->for(bookOf($userB))->create(['operation_type_id' => $sB['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mappingB->id, 'side' => EntrySide::Debit, 'account_id' => $sB['gasto']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mappingB->id, 'side' => EntrySide::Credit, 'account_id' => $sB['caja']->id]);
 
     executePago($sB['type'], '30.00');
 
-    $numbersA = JournalEntry::withoutGlobalScopes()->where('user_id', $userA->id)->orderBy('number')->pluck('number')->all();
-    $numbersB = JournalEntry::withoutGlobalScopes()->where('user_id', $userB->id)->pluck('number')->all();
+    $numbersA = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($userA)->id)->orderBy('number')->pluck('number')->all();
+    $numbersB = JournalEntry::withoutGlobalScopes()->where('book_id', bookOf($userB)->id)->pluck('number')->all();
 
     expect($numbersA)->toBe([1, 2])
         ->and($numbersB)->toBe([1]);
@@ -256,7 +256,7 @@ test('anular una ejecución contabilizada genera un contra-asiento y marca voide
     $this->actingAs($user);
 
     $s = setupOperation($user);
-    $mapping = AccountingMapping::factory()->for($user)->create(['operation_type_id' => $s['type']->id]);
+    $mapping = AccountingMapping::factory()->for(bookOf($user))->create(['operation_type_id' => $s['type']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Debit, 'account_id' => $s['gasto']->id]);
     MappingLine::factory()->create(['accounting_mapping_id' => $mapping->id, 'side' => EntrySide::Credit, 'account_id' => $s['caja']->id]);
 

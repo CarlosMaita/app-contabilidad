@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
 use App\Modules\Accounting\Enums\AccountType;
 use App\Modules\Accounting\Models\Account;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,7 +17,7 @@ class AccountFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'book_id' => Book::factory(),
             'code' => fake()->unique()->numerify('#.#.##'),
             'name' => fake()->words(2, true),
             'type' => fake()->randomElement(AccountType::cases()),

@@ -6,6 +6,7 @@ use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\ReportService;
 use App\Modules\Operations\Enums\ExecutionStatus;
 use App\Modules\Operations\Models\OperationExecution;
+use App\Modules\Shared\Books\CurrentBook;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\ResponseFactory;
@@ -24,13 +25,14 @@ class ResumenCuenta extends AccountingTool
         $today = now()->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
 
-        $balance = $reports->balanceSheet($user->id, $today);
-        $month = $reports->profitAndLoss($user->id, $monthStart, $today);
+        $balance = $reports->balanceSheet(CurrentBook::id(), $today);
+        $month = $reports->profitAndLoss(CurrentBook::id(), $monthStart, $today);
 
         return $this->respond([
             'usuario' => $user->name,
             'fecha' => $today,
-            'periodo_cerrado_hasta' => $user->accounting_closed_until?->toDateString(),
+            'contabilidad' => CurrentBook::get()->label(),
+            'periodo_cerrado_hasta' => CurrentBook::get()->accounting_closed_until?->toDateString(),
             'activo_total' => $balance['check']['assets'],
             'pasivo_patrimonio_resultado' => $balance['check']['liabilities_equity'],
             'balance_cuadra' => $balance['check']['balanced'],

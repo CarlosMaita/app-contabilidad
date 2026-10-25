@@ -18,18 +18,18 @@ use Livewire\Livewire;
  */
 function setupBalances(User $user): array
 {
-    DefaultChartOfAccounts::seedFor($user);
+    DefaultChartOfAccounts::seedFor(bookOf($user));
 
     $acc = fn (string $code): Account => Account::withoutGlobalScopes()
-        ->where('user_id', $user->id)->where('code', $code)->firstOrFail();
+        ->where('book_id', bookOf($user)->id)->where('code', $code)->firstOrFail();
 
-    $luis = Account::factory()->for($user)->create([
+    $luis = Account::factory()->for(bookOf($user))->create([
         'code' => '1.1.03.01', 'name' => 'CxC de Luis', 'type' => 'asset',
         'parent_id' => $acc('1.1.03')->id, 'is_auxiliary' => true,
     ]);
 
     $post = fn (string $date, Account $debit, Account $credit, string $amount) => app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: $date, description: 'Mov',
+        bookId: bookOf($user)->id, date: $date, description: 'Mov',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $debit->id, 'amount' => $amount, 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $credit->id, 'amount' => $amount, 'memo' => null],
@@ -61,7 +61,7 @@ test('muestra solo las cuentas con saldo, según su naturaleza y agrupadas por t
     $user = User::factory()->create();
     setupBalances($user);
 
-    $r = app(ReportService::class)->accountBalances($user->id, '2026-09-30');
+    $r = app(ReportService::class)->accountBalances(bookOf($user)->id, '2026-09-30');
 
     expect(balanceOf($r, '1.1.02'))->toBe('10000.00')        // banco, deudor
         ->and(balanceOf($r, '1.1.03.01'))->toBe('3000.00')   // auxiliar con saldo propio
@@ -82,7 +82,7 @@ test('el corte por fecha incluye los movimientos hasta ese día', function () {
     $user = User::factory()->create();
     setupBalances($user);
 
-    $r = app(ReportService::class)->accountBalances($user->id, '2026-10-31');
+    $r = app(ReportService::class)->accountBalances(bookOf($user)->id, '2026-10-31');
 
     expect(balanceOf($r, '1.1.02'))->toBe('9000.00')
         ->and(balanceOf($r, '6.1.02'))->toBe('1000.00')
@@ -93,7 +93,7 @@ test('la búsqueda filtra filas pero el control usa todas las cuentas', function
     $user = User::factory()->create();
     setupBalances($user);
 
-    $r = app(ReportService::class)->accountBalances($user->id, '2026-09-30', 'luis');
+    $r = app(ReportService::class)->accountBalances(bookOf($user)->id, '2026-09-30', 'luis');
 
     expect($r['count'])->toBe(1)
         ->and(balanceOf($r, '1.1.03.01'))->toBe('3000.00')
@@ -105,11 +105,11 @@ test('la página enlaza al mayor o al libro auxiliar y no muestra datos ajenos',
     ['acc' => $acc, 'luis' => $luis] = setupBalances($user);
 
     $other = User::factory()->create();
-    DefaultChartOfAccounts::seedFor($other);
-    $otherBank = Account::withoutGlobalScopes()->where('user_id', $other->id)->where('code', '1.1.02')->first();
-    $otherCapital = Account::withoutGlobalScopes()->where('user_id', $other->id)->where('code', '3.1')->first();
+    DefaultChartOfAccounts::seedFor(bookOf($other));
+    $otherBank = Account::withoutGlobalScopes()->where('book_id', bookOf($other)->id)->where('code', '1.1.02')->first();
+    $otherCapital = Account::withoutGlobalScopes()->where('book_id', bookOf($other)->id)->where('code', '3.1')->first();
     app(JournalEntryBuilder::class)->post(
-        userId: $other->id, date: '2026-09-01', description: 'Ajeno',
+        bookId: bookOf($other)->id, date: '2026-09-01', description: 'Ajeno',
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $otherBank->id, 'amount' => '777.00', 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $otherCapital->id, 'amount' => '777.00', 'memo' => null],

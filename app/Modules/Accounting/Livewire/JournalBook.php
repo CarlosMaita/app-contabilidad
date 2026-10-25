@@ -4,6 +4,7 @@ namespace App\Modules\Accounting\Livewire;
 
 use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\ReverseJournalEntry;
+use App\Modules\Shared\Books\CurrentBook;
 use App\Modules\Shared\Contracts\VoidsOperationExecutions;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -61,7 +62,7 @@ class JournalBook extends Component
 
     public function render()
     {
-        $entries = JournalEntry::with(['lines.account', 'execution.operationType', 'reverses'])
+        $entries = JournalEntry::with(['lines.account', 'execution.operationType', 'reverses', 'author'])
             ->filtered($this->search, $this->from, $this->to)
             ->orderByDesc('date')
             ->orderByDesc('number')
@@ -69,6 +70,7 @@ class JournalBook extends Component
 
         return view('accounting::livewire.journal-book', [
             'entries' => $entries,
+            'shared' => ! CurrentBook::get()->isPersonal(),
         ]);
     }
 }

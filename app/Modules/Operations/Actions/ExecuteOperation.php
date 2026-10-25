@@ -7,6 +7,7 @@ use App\Modules\Operations\Enums\VariableType;
 use App\Modules\Operations\Events\OperationExecuted;
 use App\Modules\Operations\Models\OperationExecution;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\CurrentBook;
 use App\Modules\Shared\Contracts\ChartOfAccountsProvider;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ class ExecuteOperation
         string $executedAt,
         ?string $description = null,
     ): OperationExecution {
-        $closedUntil = auth()->user()?->accounting_closed_until;
+        $closedUntil = CurrentBook::get()?->accounting_closed_until;
 
         $validated = Validator::make(
             ['executed_at' => $executedAt, ...$payload],

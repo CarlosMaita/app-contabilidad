@@ -2,7 +2,6 @@
 
 namespace App\Modules\Accounting\Services;
 
-use App\Models\User;
 use App\Modules\Accounting\Enums\EntrySide;
 use App\Modules\Accounting\Enums\JournalEntryStatus;
 use App\Modules\Accounting\Exceptions\ClosedPeriodException;
@@ -10,6 +9,7 @@ use App\Modules\Accounting\Exceptions\MappingResolutionException;
 use App\Modules\Accounting\Exceptions\UnbalancedEntryException;
 use App\Modules\Accounting\Models\Account;
 use App\Modules\Accounting\Models\JournalEntry;
+use App\Modules\Shared\Books\Book;
 use App\Modules\Shared\Money\Money;
 use DateTimeInterface;
 use Illuminate\Support\Carbon;
@@ -18,13 +18,13 @@ use Illuminate\Support\Facades\DB;
 class JournalEntryBuilder
 {
     /**
-     * Registra un asiento balanceado con numeración correlativa por usuario.
+     * Registra un asiento balanceado con numeración correlativa por contabilidad.
      * Todo dentro de una transacción; nunca modifica asientos existentes.
      *
      * @param  array<int, array{side: EntrySide, account_id: int, amount: string, memo: ?string}>  $lines
      */
     public function post(
-        int $userId,
+        int $bookId,
         DateTimeInterface|string $date,
         string $description,
         array $lines,
@@ -36,8 +36,8 @@ class JournalEntryBuilder
             throw new UnbalancedEntryException('El asiento no tiene líneas (todas evaluaron a 0).');
         }
 
-        $this->assertPeriodIsOpen($userId, $date);
-        $this->assertAccountsArePostable($userId, array_column($lines, 'account_id'));
+        $this->assertPeriodIsOpen($bookId, $date);
+        $this->assertAccountsArePostable($bookId, array_column($lines, 'account_id'));
 
         [$totalDebit, $totalCredit] = $this->totals($lines);
 
@@ -51,15 +51,15 @@ class JournalEntryBuilder
             throw new UnbalancedEntryException('El asiento está en cero.');
         }
 
-        return DB::transaction(function () use ($userId, $date, $description, $lines, $operationExecutionId, $mappingId, $reversesEntryId): JournalEntry {
+        return DB::transaction(function () use ($bookId, $date, $description, $lines, $operationExecutionId, $mappingId, $reversesEntryId): JournalEntry {
             $lastNumber = (int) JournalEntry::withoutGlobalScopes()
-                ->where('user_id', $userId)
+                ->where('book_id', $bookId)
                 ->orderByDesc('number')
                 ->lockForUpdate()
                 ->value('number');
 
             $entry = JournalEntry::withoutGlobalScopes()->create([
-                'user_id' => $userId,
+                'book_id' => $bookId,
                 'number' => $lastNumber + 1,
                 'date' => $date,
                 'description' => $description,
@@ -86,9 +86,9 @@ class JournalEntryBuilder
     /**
      * Cierre de período: nada se registra con fecha dentro del período cerrado.
      */
-    private function assertPeriodIsOpen(int $userId, DateTimeInterface|string $date): void
+    private function assertPeriodIsOpen(int $bookId, DateTimeInterface|string $date): void
     {
-        $closedUntil = User::query()->whereKey($userId)->value('accounting_closed_until');
+        $closedUntil = Book::query()->whereKey($bookId)->value('accounting_closed_until');
 
         if ($closedUntil === null) {
             return;
@@ -106,10 +106,10 @@ class JournalEntryBuilder
     /**
      * @param  array<int, int>  $accountIds
      */
-    private function assertAccountsArePostable(int $userId, array $accountIds): void
+    private function assertAccountsArePostable(int $bookId, array $accountIds): void
     {
         $accounts = Account::withoutGlobalScopes()
-            ->where('user_id', $userId)
+            ->where('book_id', $bookId)
             ->whereIn('id', array_unique($accountIds))
             ->get()
             ->keyBy('id');
@@ -118,7 +118,7 @@ class JournalEntryBuilder
             $account = $accounts->get($id);
 
             if ($account === null) {
-                throw new MappingResolutionException("La cuenta #{$id} no existe o no pertenece al usuario.");
+                throw new MappingResolutionException("La cuenta #{$id} no existe o no pertenece a esta contabilidad.");
             }
 
             if (! $account->is_postable || ! $account->is_active) {

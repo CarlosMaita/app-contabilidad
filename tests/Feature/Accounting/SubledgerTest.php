@@ -19,14 +19,14 @@ use Livewire\Livewire;
  */
 function setupSubledger(User $user): array
 {
-    $cxc = Account::factory()->for($user)->create(['code' => '1.1.03', 'name' => 'Clientes por cobrar', 'type' => 'asset', 'is_postable' => false]);
-    $luis = Account::factory()->for($user)->create(['code' => '1.1.03.01', 'name' => 'CxC de Luis', 'type' => 'asset', 'parent_id' => $cxc->id, 'is_auxiliary' => true]);
-    $andres = Account::factory()->for($user)->create(['code' => '1.1.03.02', 'name' => 'CxC de Andrés', 'type' => 'asset', 'parent_id' => $cxc->id, 'is_auxiliary' => true]);
-    $ventas = Account::factory()->for($user)->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income', 'pnl_section' => 'operating_income']);
-    $caja = Account::factory()->for($user)->create(['code' => '1.1.01', 'name' => 'Caja', 'type' => 'asset']);
+    $cxc = Account::factory()->for(bookOf($user))->create(['code' => '1.1.03', 'name' => 'Clientes por cobrar', 'type' => 'asset', 'is_postable' => false]);
+    $luis = Account::factory()->for(bookOf($user))->create(['code' => '1.1.03.01', 'name' => 'CxC de Luis', 'type' => 'asset', 'parent_id' => $cxc->id, 'is_auxiliary' => true]);
+    $andres = Account::factory()->for(bookOf($user))->create(['code' => '1.1.03.02', 'name' => 'CxC de Andrés', 'type' => 'asset', 'parent_id' => $cxc->id, 'is_auxiliary' => true]);
+    $ventas = Account::factory()->for(bookOf($user))->create(['code' => '4.1', 'name' => 'Ventas', 'type' => 'income', 'pnl_section' => 'operating_income']);
+    $caja = Account::factory()->for(bookOf($user))->create(['code' => '1.1.01', 'name' => 'Caja', 'type' => 'asset']);
 
     $post = fn (string $date, string $desc, Account $debit, Account $credit, string $amount) => app(JournalEntryBuilder::class)->post(
-        userId: $user->id, date: $date, description: $desc,
+        bookId: bookOf($user)->id, date: $date, description: $desc,
         lines: [
             ['side' => EntrySide::Debit, 'account_id' => $debit->id, 'amount' => $amount, 'memo' => null],
             ['side' => EntrySide::Credit, 'account_id' => $credit->id, 'amount' => $amount, 'memo' => null],
@@ -44,7 +44,7 @@ test('se puede crear una cuenta auxiliar bajo una principal y hereda tipo y secc
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $cxc = Account::factory()->for($user)->create(['code' => '1.1.03', 'name' => 'Clientes por cobrar', 'type' => 'asset']);
+    $cxc = Account::factory()->for(bookOf($user))->create(['code' => '1.1.03', 'name' => 'Clientes por cobrar', 'type' => 'asset']);
 
     Livewire::test(ChartOfAccounts::class)
         ->call('create', $cxc->id)
@@ -88,7 +88,7 @@ test('los auxiliares consolidan en la principal y no aparecen en el balance', fu
     $user = User::factory()->create();
     $s = setupSubledger($user);
 
-    $report = app(ReportService::class)->balanceSheet($user->id, '2026-09-30', includeZero: true);
+    $report = app(ReportService::class)->balanceSheet(bookOf($user)->id, '2026-09-30', includeZero: true);
     $assetCodes = collect($report['sections']['asset']['rows'])->pluck('account.code');
 
     // CxC muestra el consolidado (100 + 40 − 30 = 110); los auxiliares no listan.

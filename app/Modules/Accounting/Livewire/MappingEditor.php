@@ -10,6 +10,7 @@ use App\Modules\Accounting\Services\ProcessUnmappedExecutions;
 use App\Modules\Operations\Enums\ExecutionStatus;
 use App\Modules\Operations\Enums\VariableType;
 use App\Modules\Operations\Models\OperationType;
+use App\Modules\Shared\Books\CurrentBook;
 use App\Modules\Shared\Money\Money;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -168,7 +169,7 @@ class MappingEditor extends Component
         }
 
         $result = app(ProcessUnmappedExecutions::class)
-            ->process(auth()->id(), $this->operationType->id);
+            ->process(CurrentBook::id(), $this->operationType->id);
 
         session()->flash(
             'status',

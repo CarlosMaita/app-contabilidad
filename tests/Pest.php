@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+use App\Modules\Shared\Books\Book;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +46,8 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/** Contabilidad personal del usuario (los datos contables viven en contabilidades). */
+function bookOf(User $user): Book
 {
-    // ..
+    return $user->personalBook();
 }

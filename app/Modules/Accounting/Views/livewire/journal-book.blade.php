@@ -53,7 +53,12 @@
                                     <span class="text-xs text-neutral-600">(revierte #{{ $entry->reverses?->number }})</span>
                                 @endif
                             </td>
-                            <td class="td text-xs text-neutral-700">{{ $entry->execution?->operationType?->name ?? 'Manual' }}</td>
+                            <td class="td text-xs text-neutral-700">
+                                {{ $entry->execution?->operationType?->name ?? 'Manual' }}
+                                @if ($shared && $entry->author)
+                                    <span class="block text-[11px] text-neutral-500">por {{ $entry->author->name }}</span>
+                                @endif
+                            </td>
                             <td class="td">
                                 <span class="badge {{ $entry->status->value === 'posted' ? 'border-ink text-ink' : 'border-neutral-400 text-neutral-600' }}">
                                     {{ $entry->status->label() }}

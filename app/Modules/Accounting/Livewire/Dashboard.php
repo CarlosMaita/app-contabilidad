@@ -6,6 +6,7 @@ use App\Modules\Accounting\Models\JournalEntry;
 use App\Modules\Accounting\Services\ReportService;
 use App\Modules\Operations\Enums\ExecutionStatus;
 use App\Modules\Operations\Models\OperationExecution;
+use App\Modules\Shared\Books\CurrentBook;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -16,11 +17,11 @@ class Dashboard extends Component
 {
     public function render(ReportService $reports)
     {
-        $userId = auth()->id();
+        $bookId = CurrentBook::id();
         $today = now()->toDateString();
 
-        $balance = $reports->balanceSheet($userId, $today);
-        $month = $reports->profitAndLoss($userId, now()->startOfMonth()->toDateString(), $today);
+        $balance = $reports->balanceSheet($bookId, $today);
+        $month = $reports->profitAndLoss($bookId, now()->startOfMonth()->toDateString(), $today);
 
         $attention = OperationExecution::whereIn('status', [
             ExecutionStatus::Unmapped,
